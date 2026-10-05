@@ -32,3 +32,15 @@ dist/
 build/
 coverage/
 htmlcov/
+
+# ---- Phase 0 additions ----
+settings.toml
+web/dist/
+tests/fixtures/sample_inbox/
+reference/sample_inbox/
+reference/.venv/
+*.egg-info/
+# DICOM files: only the pinned public sample radiographs are committed
+*.dcm
+!/reference/samples/*.dcm
+!/tests/fixtures/samples/*.dcm

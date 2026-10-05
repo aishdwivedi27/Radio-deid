@@ -1,0 +1,7 @@
+# Copy to settings.toml (git-ignored) and edit. SPEC §15.2: nothing secret goes in this file.
+data_root = "C:/DeidData"            # macOS: "/Users/Shared/DeidData"
+# output_root = "C:/DeidData/output"  # default: <data_root>/output
+# app_data_dir = "C:/DeidData/app_data"  # default: <data_root>/app_data
+port = 8765
+input_roots = ["C:/DeidData/inbox"]  # admin-approved input roots (SPEC §6.5, §7)
+# bind_address is always 127.0.0.1 (SPEC §7). Any other value is refused.

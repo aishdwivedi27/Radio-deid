@@ -1,0 +1,61 @@
+[project]
+name = "deid-station"
+version = "0.0.1"
+description = "De-identification Station: desktop app that screens and pseudonymises imaging studies (SPEC v0.5)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "httpx>=0.27",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "pylint>=3.2",
+    "detect-secrets>=1.5",
+    "pre-commit>=3.8",
+    "uv>=0.4",
+    # test fixtures (tests/fixtures/make_sample_data.py)
+    "reportlab>=4.2",
+    "pydicom>=3.0",
+    "numpy>=2.0",
+    "pillow>=10.4",
+    "python-docx>=1.1",
+]
+
+[build-system]
+requires = ["setuptools>=70"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+extend-exclude = ["reference", "web", "tests/fixtures/sample_inbox"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "BLE"]
+ignore = ["S101"]  # assert is how pytest works
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S603", "S607", "S108", "S104"]
+"tools/**" = ["S603", "S607"]
+"tests/fixtures/make_sample_data.py" = ["E401", "E702", "E731", "B007", "S311"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["app", "tools"]
+exclude = ["^reference/", "^tests/fixtures/"]
