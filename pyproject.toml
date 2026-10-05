@@ -44,7 +44,7 @@ filterwarnings = ["ignore:Using `httpx` with `starlette.testclient`"]
 [tool.ruff]
 line-length = 110
 target-version = "py312"
-extend-exclude = ["reference", "web", "tests/fixtures/sample_inbox"]
+extend-exclude = ["reference", "web", "tests/fixtures"]  # fixtures are exempt (CLAUDE.md, File size)
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "S", "BLE"]
@@ -53,7 +53,6 @@ ignore = ["S101"]  # assert is how pytest works
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S603", "S607", "S108", "S104"]
 "tools/**" = ["S603", "S607"]
-"tests/fixtures/make_sample_data.py" = ["E401", "E702", "E731", "B007", "S311"]
 
 [tool.mypy]
 python_version = "3.12"
