@@ -1,4 +1,4 @@
-# CI: the same checks as tools/check_all on Windows, macOS and Linux (CLAUDE.md, Git and checks).
+# CI: the same checks as tools/check_all on Windows, macOS and Linux.
 # First runs when the owner pushes. CI never reads git-ignored files: the trace report is skipped (--ci).
 name: ci
 
