@@ -1,0 +1,7 @@
+# LF everywhere so hashes of rule files and golden outputs are identical on Windows, macOS and Linux.
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.dcm binary
+*.docx binary
+*.pdf binary
+*.png binary
