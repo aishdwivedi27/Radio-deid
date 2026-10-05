@@ -1,0 +1,49 @@
+# CI: the same checks as tools/check_all on Windows, macOS and Linux (CLAUDE.md, Git and checks).
+# First runs when the owner pushes. CI never reads git-ignored files: the trace report is skipped (--ci).
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install Python dependencies (hashed lock)
+        run: |
+          python -m venv .venv
+          ${{ runner.os == 'Windows' && '.venv\Scripts\python.exe' || '.venv/bin/python' }} -m pip install --require-hashes -r requirements-dev.lock
+
+      - name: Install web dependencies
+        run: npm ci --prefix web
+
+      - name: Run all checks (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./tools/check_all.ps1 -CI
+
+      - name: Run all checks (macOS, Linux)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: ./tools/check_all.sh --ci
