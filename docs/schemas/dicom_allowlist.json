@@ -1,0 +1,777 @@
+{
+  "version": "0.2",
+  "description": "STRICT DICOM header allowlist (SPEC v0.3 §6.0). allowed(file) = core ∪ profiles[modality_to_profile[Modality]] ∪ generated, plus a rebuilt File Meta group (0002). Every other element - standard, private, sequence (except the rebuilt ultrasound regions sequence), overlay (60xx), curve (50xx), retired - is removed. Nothing is ever blanked-and-kept. Additions need docs/ALLOWLIST_CHANGES.md + sign-off + pipeline_version bump + ec_amendment_ref.",
+  "core_count": 54,
+  "core": [
+    {
+      "tag": "(0008,0008)",
+      "keyword": "ImageType",
+      "name": "Image Type",
+      "vr": "CS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0008,0016)",
+      "keyword": "SOPClassUID",
+      "name": "SOP Class UID",
+      "vr": "UI",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0008,0060)",
+      "keyword": "Modality",
+      "name": "Modality",
+      "vr": "CS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0008,0070)",
+      "keyword": "Manufacturer",
+      "name": "Manufacturer",
+      "vr": "LO",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0008,1030)",
+      "keyword": "StudyDescription",
+      "name": "Study Description",
+      "vr": "LO",
+      "handling": "scrub"
+    },
+    {
+      "tag": "(0008,103E)",
+      "keyword": "SeriesDescription",
+      "name": "Series Description",
+      "vr": "LO",
+      "handling": "scrub"
+    },
+    {
+      "tag": "(0008,1090)",
+      "keyword": "ManufacturerModelName",
+      "name": "Manufacturer's Model Name",
+      "vr": "LO",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0010,0040)",
+      "keyword": "PatientSex",
+      "name": "Patient's Sex",
+      "vr": "CS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0010,1010)",
+      "keyword": "PatientAge",
+      "name": "Patient's Age",
+      "vr": "AS",
+      "handling": "recompute"
+    },
+    {
+      "tag": "(0018,0010)",
+      "keyword": "ContrastBolusAgent",
+      "name": "Contrast/Bolus Agent",
+      "vr": "LO",
+      "handling": "scrub"
+    },
+    {
+      "tag": "(0018,0015)",
+      "keyword": "BodyPartExamined",
+      "name": "Body Part Examined",
+      "vr": "CS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0018,0050)",
+      "keyword": "SliceThickness",
+      "name": "Slice Thickness",
+      "vr": "DS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0018,0060)",
+      "keyword": "KVP",
+      "name": "KVP",
+      "vr": "DS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0018,0088)",
+      "keyword": "SpacingBetweenSlices",
+      "name": "Spacing Between Slices",
+      "vr": "DS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0018,1030)",
+      "keyword": "ProtocolName",
+      "name": "Protocol Name",
+      "vr": "LO",
+      "handling": "scrub"
+    },
+    {
+      "tag": "(0018,1150)",
+      "keyword": "ExposureTime",
+      "name": "Exposure Time",
+      "vr": "IS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0018,1151)",
+      "keyword": "XRayTubeCurrent",
+      "name": "X-Ray Tube Current",
+      "vr": "IS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0018,1152)",
+      "keyword": "Exposure",
+      "name": "Exposure",
+      "vr": "IS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0018,1164)",
+      "keyword": "ImagerPixelSpacing",
+      "name": "Imager Pixel Spacing",
+      "vr": "DS",
+      "handling": "validate"
+    },
+    {
+      "tag": "(0018,1210)",
+      "keyword": "ConvolutionKernel",
+      "name": "Convolution Kernel",
+      "vr": "SH",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0018,5100)",
+      "keyword": "PatientPosition",
+      "name": "Patient Position",
+      "vr": "CS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0018,5101)",
+      "keyword": "ViewPosition",
+      "name": "View Position",
+      "vr": "CS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0020,0011)",
+      "keyword": "SeriesNumber",
+      "name": "Series Number",
+      "vr": "IS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0020,0012)",
+      "keyword": "AcquisitionNumber",
+      "name": "Acquisition Number",
+      "vr": "IS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0020,0013)",
+      "keyword": "InstanceNumber",
+      "name": "Instance Number",
+      "vr": "IS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0020,0032)",
+      "keyword": "ImagePositionPatient",
+      "name": "Image Position (Patient)",
+      "vr": "DS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0020,0037)",
+      "keyword": "ImageOrientationPatient",
+      "name": "Image Orientation (Patient)",
+      "vr": "DS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0020,0060)",
+      "keyword": "Laterality",
+      "name": "Laterality",
+      "vr": "CS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0020,0062)",
+      "keyword": "ImageLaterality",
+      "name": "Image Laterality",
+      "vr": "CS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0020,1041)",
+      "keyword": "SliceLocation",
+      "name": "Slice Location",
+      "vr": "DS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0028,0002)",
+      "keyword": "SamplesPerPixel",
+      "name": "Samples per Pixel",
+      "vr": "US",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0028,0004)",
+      "keyword": "PhotometricInterpretation",
+      "name": "Photometric Interpretation",
+      "vr": "CS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0028,0006)",
+      "keyword": "PlanarConfiguration",
+      "name": "Planar Configuration",
+      "vr": "US",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0028,0008)",
+      "keyword": "NumberOfFrames",
+      "name": "Number of Frames",
+      "vr": "IS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0028,0010)",
+      "keyword": "Rows",
+      "name": "Rows",
+      "vr": "US",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0028,0011)",
+      "keyword": "Columns",
+      "name": "Columns",
+      "vr": "US",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0028,0030)",
+      "keyword": "PixelSpacing",
+      "name": "Pixel Spacing",
+      "vr": "DS",
+      "handling": "validate"
+    },
+    {
+      "tag": "(0028,0034)",
+      "keyword": "PixelAspectRatio",
+      "name": "Pixel Aspect Ratio",
+      "vr": "IS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0028,0100)",
+      "keyword": "BitsAllocated",
+      "name": "Bits Allocated",
+      "vr": "US",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0028,0101)",
+      "keyword": "BitsStored",
+      "name": "Bits Stored",
+      "vr": "US",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0028,0102)",
+      "keyword": "HighBit",
+      "name": "High Bit",
+      "vr": "US",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0028,0103)",
+      "keyword": "PixelRepresentation",
+      "name": "Pixel Representation",
+      "vr": "US",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0028,0301)",
+      "keyword": "BurnedInAnnotation",
+      "name": "Burned In Annotation",
+      "vr": "CS",
+      "handling": "set_after_mask"
+    },
+    {
+      "tag": "(0028,1050)",
+      "keyword": "WindowCenter",
+      "name": "Window Center",
+      "vr": "DS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0028,1051)",
+      "keyword": "WindowWidth",
+      "name": "Window Width",
+      "vr": "DS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0028,1052)",
+      "keyword": "RescaleIntercept",
+      "name": "Rescale Intercept",
+      "vr": "DS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0028,1053)",
+      "keyword": "RescaleSlope",
+      "name": "Rescale Slope",
+      "vr": "DS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0028,1054)",
+      "keyword": "RescaleType",
+      "name": "Rescale Type",
+      "vr": "LO",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0028,1056)",
+      "keyword": "VOILUTFunction",
+      "name": "VOI LUT Function",
+      "vr": "CS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0028,2110)",
+      "keyword": "LossyImageCompression",
+      "name": "Lossy Image Compression",
+      "vr": "CS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0028,2112)",
+      "keyword": "LossyImageCompressionRatio",
+      "name": "Lossy Image Compression Ratio",
+      "vr": "DS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(0028,2114)",
+      "keyword": "LossyImageCompressionMethod",
+      "name": "Lossy Image Compression Method",
+      "vr": "CS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(2050,0020)",
+      "keyword": "PresentationLUTShape",
+      "name": "Presentation LUT Shape",
+      "vr": "CS",
+      "handling": "copy"
+    },
+    {
+      "tag": "(7FE0,0010)",
+      "keyword": "PixelData",
+      "name": "Pixel Data",
+      "vr": "OB or OW",
+      "handling": "mask"
+    }
+  ],
+  "modality_to_profile": {
+    "CT": "CT",
+    "MR": "MR",
+    "US": "US",
+    "CR": "XR",
+    "DX": "XR",
+    "RG": "XR"
+  },
+  "profile_counts": {
+    "CT": 4,
+    "MR": 14,
+    "US": 4,
+    "XR": 3
+  },
+  "profiles": {
+    "CT": [
+      {
+        "tag": "(0018,1100)",
+        "keyword": "ReconstructionDiameter",
+        "name": "Reconstruction Diameter",
+        "vr": "DS",
+        "handling": "copy"
+      },
+      {
+        "tag": "(0018,9311)",
+        "keyword": "SpiralPitchFactor",
+        "name": "Spiral Pitch Factor",
+        "vr": "FD",
+        "handling": "copy"
+      },
+      {
+        "tag": "(0018,9345)",
+        "keyword": "CTDIvol",
+        "name": "CTDIvol",
+        "vr": "FD",
+        "handling": "copy"
+      },
+      {
+        "tag": "(0018,1040)",
+        "keyword": "ContrastBolusRoute",
+        "name": "Contrast Bolus Route",
+        "vr": "LO",
+        "handling": "scrub"
+      }
+    ],
+    "MR": [
+      {
+        "tag": "(0018,0020)",
+        "keyword": "ScanningSequence",
+        "name": "Scanning Sequence",
+        "vr": "CS",
+        "handling": "copy"
+      },
+      {
+        "tag": "(0018,0021)",
+        "keyword": "SequenceVariant",
+        "name": "Sequence Variant",
+        "vr": "CS",
+        "handling": "copy"
+      },
+      {
+        "tag": "(0018,0022)",
+        "keyword": "ScanOptions",
+        "name": "Scan Options",
+        "vr": "CS",
+        "handling": "copy"
+      },
+      {
+        "tag": "(0018,0023)",
+        "keyword": "MRAcquisitionType",
+        "name": "MRAcquisition Type",
+        "vr": "CS",
+        "handling": "copy"
+      },
+      {
+        "tag": "(0018,0024)",
+        "keyword": "SequenceName",
+        "name": "Sequence Name",
+        "vr": "SH",
+        "handling": "scrub"
+      },
+      {
+        "tag": "(0018,0080)",
+        "keyword": "RepetitionTime",
+        "name": "Repetition Time",
+        "vr": "DS",
+        "handling": "copy"
+      },
+      {
+        "tag": "(0018,0081)",
+        "keyword": "EchoTime",
+        "name": "Echo Time",
+        "vr": "DS",
+        "handling": "copy"
+      },
+      {
+        "tag": "(0018,0082)",
+        "keyword": "InversionTime",
+        "name": "Inversion Time",
+        "vr": "DS",
+        "handling": "copy"
+      },
+      {
+        "tag": "(0018,0083)",
+        "keyword": "NumberOfAverages",
+        "name": "Number Of Averages",
+        "vr": "DS",
+        "handling": "copy"
+      },
+      {
+        "tag": "(0018,0084)",
+        "keyword": "ImagingFrequency",
+        "name": "Imaging Frequency",
+        "vr": "DS",
+        "handling": "copy"
+      },
+      {
+        "tag": "(0018,0087)",
+        "keyword": "MagneticFieldStrength",
+        "name": "Magnetic Field Strength",
+        "vr": "DS",
+        "handling": "copy"
+      },
+      {
+        "tag": "(0018,0091)",
+        "keyword": "EchoTrainLength",
+        "name": "Echo Train Length",
+        "vr": "IS",
+        "handling": "copy"
+      },
+      {
+        "tag": "(0018,1314)",
+        "keyword": "FlipAngle",
+        "name": "Flip Angle",
+        "vr": "DS",
+        "handling": "copy"
+      },
+      {
+        "tag": "(0018,9087)",
+        "keyword": "DiffusionBValue",
+        "name": "Diffusion BValue",
+        "vr": "FD",
+        "handling": "copy"
+      }
+    ],
+    "US": [
+      {
+        "tag": "(0018,5010)",
+        "keyword": "TransducerData",
+        "name": "Transducer Data",
+        "vr": "LO",
+        "handling": "scrub"
+      },
+      {
+        "tag": "(0018,1063)",
+        "keyword": "FrameTime",
+        "name": "Frame Time",
+        "vr": "DS",
+        "handling": "copy"
+      },
+      {
+        "tag": "(0028,0014)",
+        "keyword": "UltrasoundColorDataPresent",
+        "name": "Ultrasound Color Data Present",
+        "vr": "US",
+        "handling": "copy"
+      },
+      {
+        "tag": "(0018,6011)",
+        "keyword": "SequenceOfUltrasoundRegions",
+        "name": "Sequence Of Ultrasound Regions",
+        "vr": "SQ",
+        "handling": "item_allowlist"
+      }
+    ],
+    "XR": [
+      {
+        "tag": "(0018,1110)",
+        "keyword": "DistanceSourceToDetector",
+        "name": "Distance Source To Detector",
+        "vr": "DS",
+        "handling": "copy"
+      },
+      {
+        "tag": "(0018,1111)",
+        "keyword": "DistanceSourceToPatient",
+        "name": "Distance Source To Patient",
+        "vr": "DS",
+        "handling": "copy"
+      },
+      {
+        "tag": "(0018,1114)",
+        "keyword": "EstimatedRadiographicMagnificationFactor",
+        "name": "Estimated Radiographic Magnification Factor",
+        "vr": "DS",
+        "handling": "copy"
+      }
+    ]
+  },
+  "us_region_item_allowlist": [
+    {
+      "tag": "(0018,6012)",
+      "keyword": "RegionSpatialFormat"
+    },
+    {
+      "tag": "(0018,6014)",
+      "keyword": "RegionDataType"
+    },
+    {
+      "tag": "(0018,6016)",
+      "keyword": "RegionFlags"
+    },
+    {
+      "tag": "(0018,6018)",
+      "keyword": "RegionLocationMinX0"
+    },
+    {
+      "tag": "(0018,601A)",
+      "keyword": "RegionLocationMinY0"
+    },
+    {
+      "tag": "(0018,601C)",
+      "keyword": "RegionLocationMaxX1"
+    },
+    {
+      "tag": "(0018,601E)",
+      "keyword": "RegionLocationMaxY1"
+    },
+    {
+      "tag": "(0018,6020)",
+      "keyword": "ReferencePixelX0"
+    },
+    {
+      "tag": "(0018,6022)",
+      "keyword": "ReferencePixelY0"
+    },
+    {
+      "tag": "(0018,6024)",
+      "keyword": "PhysicalUnitsXDirection"
+    },
+    {
+      "tag": "(0018,6026)",
+      "keyword": "PhysicalUnitsYDirection"
+    },
+    {
+      "tag": "(0018,602C)",
+      "keyword": "PhysicalDeltaX"
+    },
+    {
+      "tag": "(0018,602E)",
+      "keyword": "PhysicalDeltaY"
+    }
+  ],
+  "generated_count": 15,
+  "generated": [
+    {
+      "tag": "(0008,0018)",
+      "keyword": "SOPInstanceUID",
+      "name": "SOP Instance UID",
+      "vr": "UI",
+      "value": "2.25.<HMAC of original>"
+    },
+    {
+      "tag": "(0008,0020)",
+      "keyword": "StudyDate",
+      "name": "Study Date",
+      "vr": "DA",
+      "value": "shifted / year-only / omitted per date_mode"
+    },
+    {
+      "tag": "(0008,0021)",
+      "keyword": "SeriesDate",
+      "name": "Series Date",
+      "vr": "DA",
+      "value": "as StudyDate"
+    },
+    {
+      "tag": "(0008,0022)",
+      "keyword": "AcquisitionDate",
+      "name": "Acquisition Date",
+      "vr": "DA",
+      "value": "as StudyDate"
+    },
+    {
+      "tag": "(0008,0023)",
+      "keyword": "ContentDate",
+      "name": "Content Date",
+      "vr": "DA",
+      "value": "as StudyDate"
+    },
+    {
+      "tag": "(0008,0050)",
+      "keyword": "AccessionNumber",
+      "name": "Accession Number",
+      "vr": "SH",
+      "value": "record_id"
+    },
+    {
+      "tag": "(0010,0010)",
+      "keyword": "PatientName",
+      "name": "Patient's Name",
+      "vr": "PN",
+      "value": "patient_code"
+    },
+    {
+      "tag": "(0010,0020)",
+      "keyword": "PatientID",
+      "name": "Patient ID",
+      "vr": "LO",
+      "value": "patient_code"
+    },
+    {
+      "tag": "(0012,0062)",
+      "keyword": "PatientIdentityRemoved",
+      "name": "Patient Identity Removed",
+      "vr": "CS",
+      "value": "YES"
+    },
+    {
+      "tag": "(0012,0063)",
+      "keyword": "DeidentificationMethod",
+      "name": "De-identification Method",
+      "vr": "LO",
+      "value": "app name + pipeline_version + date_mode"
+    },
+    {
+      "tag": "(0020,000D)",
+      "keyword": "StudyInstanceUID",
+      "name": "Study Instance UID",
+      "vr": "UI",
+      "value": "2.25.<HMAC of original>"
+    },
+    {
+      "tag": "(0020,000E)",
+      "keyword": "SeriesInstanceUID",
+      "name": "Series Instance UID",
+      "vr": "UI",
+      "value": "2.25.<HMAC of original>"
+    },
+    {
+      "tag": "(0020,0010)",
+      "keyword": "StudyID",
+      "name": "Study ID",
+      "vr": "SH",
+      "value": "record_id"
+    },
+    {
+      "tag": "(0020,0052)",
+      "keyword": "FrameOfReferenceUID",
+      "name": "Frame of Reference UID",
+      "vr": "UI",
+      "value": "2.25.<HMAC of original> (only if present in source)"
+    },
+    {
+      "tag": "(0020,4000)",
+      "keyword": "ImageComments",
+      "name": "Image Comments",
+      "vr": "LT",
+      "value": "image_id"
+    }
+  ],
+  "file_meta_rebuilt": [
+    "FileMetaInformationGroupLength",
+    "FileMetaInformationVersion",
+    "MediaStorageSOPClassUID",
+    "MediaStorageSOPInstanceUID",
+    "TransferSyntaxUID",
+    "ImplementationClassUID",
+    "ImplementationVersionName"
+  ],
+  "always_removed_examples": [
+    "PatientSize",
+    "PatientWeight",
+    "all private tags (odd groups)",
+    "all sequences (VR SQ)",
+    "overlays 60xx",
+    "curves 50xx",
+    "PatientBirthDate",
+    "PatientAddress",
+    "PatientTelephoneNumbers",
+    "OtherPatientIDs",
+    "InstitutionName",
+    "InstitutionAddress",
+    "ReferringPhysicianName",
+    "PerformingPhysicianName",
+    "OperatorsName",
+    "StationName",
+    "DeviceSerialNumber",
+    "all *Time tags",
+    "RequestAttributesSequence",
+    "ReferencedStudySequence"
+  ]
+}

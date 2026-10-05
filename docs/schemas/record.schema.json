@@ -1,0 +1,261 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "record.schema.json",
+  "title": "De-identified record (one study, one version)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "record_id",
+    "record_version",
+    "patient_code",
+    "modalities",
+    "n_images",
+    "image_ids",
+    "report",
+    "qa",
+    "job_id",
+    "processed_at",
+    "finalised_at",
+    "pipeline_version",
+    "key_fingerprint",
+    "date_mode",
+    "age_band",
+    "finding_category",
+    "consent_basis",
+    "cohort_ref",
+    "rules_version"
+  ],
+  "properties": {
+    "record_id": {
+      "type": "string",
+      "pattern": "^S[0-9A-F]{12}$"
+    },
+    "record_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "patient_code": {
+      "type": "string",
+      "pattern": "^P[0-9A-F]{12}$"
+    },
+    "modalities": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z]{2,3}$"
+      },
+      "minItems": 1
+    },
+    "body_part": {
+      "type": "string"
+    },
+    "study_description": {
+      "type": "string",
+      "description": "after identifier scrubbing"
+    },
+    "study_date": {
+      "type": "string",
+      "pattern": "^(\\d{4}-\\d{2}-\\d{2}|\\d{4}|)$",
+      "description": "shifted / year only / empty per date_mode"
+    },
+    "date_mode": {
+      "enum": [
+        "shift",
+        "year_only",
+        "remove"
+      ]
+    },
+    "patient_sex": {
+      "enum": [
+        "M",
+        "F",
+        "O",
+        ""
+      ]
+    },
+    "patient_age": {
+      "type": "string",
+      "pattern": "^(\\d{3}[DWMY])?$"
+    },
+    "manufacturer": {
+      "type": "string"
+    },
+    "model": {
+      "type": "string"
+    },
+    "n_series": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "n_images": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "image_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^S[0-9A-F]{12}-[0-9]{3}-[0-9]{5}(-[b-z])?$"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "present"
+      ],
+      "properties": {
+        "present": {
+          "type": "boolean"
+        },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "redactions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "source_format": {
+          "enum": [
+            "txt",
+            "docx",
+            "pdf",
+            null
+          ]
+        },
+        "extraction": {
+          "enum": [
+            "native",
+            "ocr",
+            null
+          ],
+          "description": "ocr = scanned PDF page(s); reviewer shown a close-check banner"
+        }
+      }
+    },
+    "ocr_regions_masked": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "images_excluded": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "reason",
+          "count"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    },
+    "qa": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "auto_checks",
+        "consistency_checks",
+        "decision",
+        "reviewer_id",
+        "decided_at"
+      ],
+      "properties": {
+        "auto_checks": {
+          "type": "object",
+          "additionalProperties": {
+            "enum": [
+              "pass",
+              "fail",
+              "n/a"
+            ]
+          }
+        },
+        "consistency_checks": {
+          "type": "object",
+          "additionalProperties": {
+            "enum": [
+              "pass",
+              "fail"
+            ]
+          }
+        },
+        "decision": {
+          "const": "approved"
+        },
+        "reviewer_id": {
+          "type": "string",
+          "description": "internal user id, not a name"
+        },
+        "decided_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "job_id": {
+      "type": "string"
+    },
+    "processed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "finalised_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "pipeline_version": {
+      "type": "string"
+    },
+    "key_fingerprint": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{16}$",
+      "description": "first 16 hex of sha256(key) - never the key"
+    },
+    "age_band": {
+      "type": "string",
+      "pattern": "^([0-8][05]-[0-8][49]|90\\+)$",
+      "description": "5-year band from the capped age (SPEC §5.2)"
+    },
+    "finding_category": {
+      "type": "string",
+      "description": "code from docs/schemas/finding_categories.json, chosen by the reviewer"
+    },
+    "consent_basis": {
+      "enum": [
+        "waiver",
+        "consent_flag"
+      ],
+      "description": "waiver = study on/before the cut-off; consent_flag = after the cut-off with a recorded Yes (SPEC §12.1)"
+    },
+    "cohort_ref": {
+      "type": "string",
+      "description": "ethics approval reference active at finalisation"
+    },
+    "rules_version": {
+      "type": "string",
+      "description": "version of docs/schemas/exclusion_rules.json applied"
+    }
+  }
+}

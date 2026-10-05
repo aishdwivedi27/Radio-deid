@@ -1,0 +1,71 @@
+{
+  "record_id": "S7DB2DCB7C0A0",
+  "record_version": 1,
+  "patient_code": "P3F9A1C07B2E4",
+  "modalities": [
+    "CR"
+  ],
+  "body_part": "CHEST",
+  "study_description": "XR CHEST PA - [REDACTED] [REDACTED]",
+  "study_date": "2025-09-27",
+  "date_mode": "shift",
+  "patient_sex": "M",
+  "patient_age": "058Y",
+  "manufacturer": "Philips Medical Systems",
+  "model": "Cassette Holder Type 9840 500 70201",
+  "n_series": 1,
+  "n_images": 1,
+  "image_ids": [
+    "S7DB2DCB7C0A0-002-00001"
+  ],
+  "report": {
+    "present": true,
+    "file": "records/S7DB2DCB7C0A0/S7DB2DCB7C0A0_report.txt",
+    "sha256": "82f3e9c695dc6b8d1b11818d5701919e286de8d47f7c3eb3100c485f79e57828",
+    "source_format": "txt",
+    "extraction": "native",
+    "redactions": {
+      "LABELLED_FIELD": 4,
+      "KNOWN_ID": 1,
+      "REGNO": 1,
+      "DATE": 1,
+      "NAME": 1
+    }
+  },
+  "ocr_regions_masked": 3,
+  "images_excluded": [],
+  "qa": {
+    "auto_checks": {
+      "A1": "pass",
+      "A2": "pass",
+      "A3": "pass",
+      "A4": "pass",
+      "A5": "pass",
+      "A6": "pass",
+      "A7": "pass"
+    },
+    "consistency_checks": {
+      "C1": "pass",
+      "C2": "pass",
+      "C3": "pass",
+      "C4": "pass",
+      "C5": "pass",
+      "C6": "pass",
+      "C7": "pass",
+      "C8": "pass"
+    },
+    "decision": "approved",
+    "reviewer_id": "u_0003",
+    "decided_at": "2026-09-25T11:04:12+05:30"
+  },
+  "job_id": "J20260925-103512",
+  "processed_at": "2026-09-25T10:36:02+05:30",
+  "finalised_at": "2026-09-25T11:04:12+05:30",
+  "pipeline_version": "1.0.0",
+  "key_fingerprint": "9c1e44b07a2f6d13",
+  "age_band": "55-59",
+  "finding_category": "NODULE_MASS",
+  "consent_basis": "waiver",
+  "cohort_ref": "EC-REF-EXAMPLE-001",
+  "rules_version": "1.0"
+}

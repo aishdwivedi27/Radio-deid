@@ -1,0 +1,94 @@
+{
+  "version": "0.1-draft",
+  "status": "OPEN decision D4: vocabulary to be confirmed by the PI before the first release",
+  "description": "Coarse finding categories used for small-group suppression (SPEC \u00a713.2) and catalogue counts. Keep categories broad so groups stay large.",
+  "categories": [
+    {
+      "code": "NORMAL",
+      "label": "No significant abnormality"
+    },
+    {
+      "code": "NODULE_MASS",
+      "label": "Nodule or mass"
+    },
+    {
+      "code": "FRACTURE",
+      "label": "Fracture"
+    },
+    {
+      "code": "CONSOLIDATION_INFECTION",
+      "label": "Consolidation or infection"
+    },
+    {
+      "code": "EFFUSION_FLUID",
+      "label": "Effusion or fluid collection"
+    },
+    {
+      "code": "DEGENERATIVE",
+      "label": "Degenerative change"
+    },
+    {
+      "code": "CALCULUS",
+      "label": "Calculus (stone)"
+    },
+    {
+      "code": "VASCULAR",
+      "label": "Vascular abnormality"
+    },
+    {
+      "code": "POSTOP_IMPLANT",
+      "label": "Post-operative change or implant"
+    },
+    {
+      "code": "OTHER_ABNORMAL",
+      "label": "Other abnormality"
+    }
+  ],
+  "prefill_keywords": {
+    "NODULE_MASS": [
+      "nodule",
+      "mass",
+      "lesion",
+      "neoplasm",
+      "tumour",
+      "tumor"
+    ],
+    "FRACTURE": [
+      "fracture"
+    ],
+    "CONSOLIDATION_INFECTION": [
+      "consolidation",
+      "pneumonia",
+      "infective",
+      "koch",
+      "tuberculosis"
+    ],
+    "EFFUSION_FLUID": [
+      "effusion",
+      "collection",
+      "ascites"
+    ],
+    "DEGENERATIVE": [
+      "degenerative",
+      "spondylosis",
+      "osteoarthritis"
+    ],
+    "CALCULUS": [
+      "calculus",
+      "calculi",
+      "stone"
+    ],
+    "POSTOP_IMPLANT": [
+      "post-operative",
+      "postoperative",
+      "implant",
+      "prosthesis",
+      "k-wire"
+    ],
+    "NORMAL": [
+      "no significant abnormality",
+      "normal study",
+      "within normal limits"
+    ]
+  }
+}

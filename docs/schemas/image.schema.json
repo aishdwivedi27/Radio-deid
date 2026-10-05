@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "image.schema.json",
+  "title": "De-identified image (one DICOM file)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "image_id",
+    "record_id",
+    "record_version",
+    "patient_code",
+    "file",
+    "sha256",
+    "bytes",
+    "modality",
+    "series_number",
+    "instance_number",
+    "finalised_at"
+  ],
+  "properties": {
+    "image_id": {
+      "type": "string",
+      "pattern": "^S[0-9A-F]{12}-[0-9]{3}-[0-9]{5}(-[b-z])?$"
+    },
+    "record_id": {
+      "type": "string",
+      "pattern": "^S[0-9A-F]{12}$"
+    },
+    "record_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "patient_code": {
+      "type": "string",
+      "pattern": "^P[0-9A-F]{12}$"
+    },
+    "file": {
+      "type": "string",
+      "pattern": "^records/S[0-9A-F]{12}/S[0-9A-F]{12}-[0-9]{3}-[0-9]{5}(-[b-z])?\\.dcm$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "bytes": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "modality": {
+      "type": "string"
+    },
+    "sop_class": {
+      "type": "string"
+    },
+    "series_number": {
+      "type": "integer"
+    },
+    "instance_number": {
+      "type": "integer"
+    },
+    "frames": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "rows": {
+      "type": "integer"
+    },
+    "columns": {
+      "type": "integer"
+    },
+    "bits_stored": {
+      "type": "integer"
+    },
+    "photometric": {
+      "type": "string"
+    },
+    "pixel_spacing": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "number",
+        "exclusiveMinimum": 0
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "view_position": {
+      "type": "string"
+    },
+    "laterality": {
+      "type": "string"
+    },
+    "body_part": {
+      "type": "string"
+    },
+    "transfer_syntax": {
+      "type": "string"
+    },
+    "burned_in_text_masked": {
+      "type": "boolean"
+    },
+    "ocr_regions": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "finalised_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

@@ -1,0 +1,34 @@
+# ---- Documentation policy (owner decision, 5 Oct 2026) ----
+# Only the business spec (BRD) goes to GitHub. All other documentation,
+# CLAUDE.md and the phase prompts stay on this machine only.
+# docs/schemas and docs/examples are code inputs (loaded by the app and tests) and ARE committed.
+/CLAUDE.md
+/README.md
+/prompts/
+/docs/*
+!/docs/BRD-RAD-001_Business_Requirements_v*.docx
+!/docs/schemas/
+!/docs/examples/
+.claude/
+
+# ---- Data and secrets: never committed ----
+app_data/
+output/
+staging/
+data/
+*.key
+.env
+
+# ---- Environments and build output ----
+.venv/
+venv/
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+coverage/
+htmlcov/

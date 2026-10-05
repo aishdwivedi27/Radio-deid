@@ -1,0 +1,23 @@
+DE-IDENTIFIED REPORT
+Record ID: S7DB2DCB7C0A0
+Patient code: P3F9A1C07B2E4
+Images: S7DB2DCB7C0A0-002-00001
+------------------------------------------------------------
+[REDACTED], PUNE
+Patient Name: [REDACTED]
+UHID: [REDACTED]
+Age/Sex: 58Y/M
+Ref By: [REDACTED]
+Date: [DATE]
+Mobile: [REDACTED]
+
+X-RAY CHEST PA
+
+FINDINGS:
+Multiple well-defined rounded opacities of varying size in both lungs,
+predominantly mid and lower zones. Cardiac silhouette within normal limits.
+
+IMPRESSION:
+Bilateral multiple pulmonary nodules - suggest CT chest correlation.
+
+[NAME], MD Radiology ([REGNO])

@@ -1,0 +1,201 @@
+{
+  "rules_version": "1.0",
+  "description": "Eligibility screen rules (docs/SPEC.md \u00a76.4). Case-insensitive; evaluated in order; first match recorded. Adding a rule or keyword is always allowed; removing or narrowing needs an ec_amendment_ref (docs/RULES_CHANGES.md). Keyword lists are starter lists to confirm against the centre's report templates.",
+  "rules": [
+    {
+      "order": 1,
+      "reason": "PRE_APPROVAL_REAL_DATA",
+      "type": "mode",
+      "condition": "no active ethics approval AND NOT (InstitutionName == 'SYNTHETIC-DEMO' AND PatientID startswith 'DEMO-')"
+    },
+    {
+      "order": 2,
+      "reason": "OUT_OF_DATE_RANGE",
+      "type": "date",
+      "condition": "original StudyDate < archive_start_date"
+    },
+    {
+      "order": 3,
+      "reason": "NO_CONSENT_AFTER_CUTOFF",
+      "type": "consent",
+      "condition": "original StudyDate > waiver_cutoff_date AND (no CONSENT=Yes flag OR OPT_OUT flag)"
+    },
+    {
+      "order": 4,
+      "reason": "OPT_OUT",
+      "type": "flag",
+      "flag": "OPT_OUT"
+    },
+    {
+      "order": 5,
+      "reason": "STAFF_VIP",
+      "type": "flag",
+      "flag": "STAFF_VIP"
+    },
+    {
+      "order": 6,
+      "reason": "AGE_UNDER_18",
+      "type": "age",
+      "condition": "age_at_study < 18"
+    },
+    {
+      "order": 6,
+      "reason": "AGE_UNKNOWN",
+      "type": "age",
+      "condition": "no usable PatientAge or PatientBirthDate"
+    },
+    {
+      "order": 7,
+      "reason": "OB_PELVIC_US",
+      "type": "keywords",
+      "modalities": [
+        "US"
+      ],
+      "fields": [
+        "BodyPartExamined",
+        "StudyDescription",
+        "SeriesDescription",
+        "ProtocolName",
+        "report"
+      ],
+      "keywords": [
+        "OB",
+        "OBS",
+        "OBST",
+        "OBSTETRIC",
+        "PREGNAN",
+        "GRAVID",
+        "FETAL",
+        "FOETAL",
+        "FETUS",
+        "NT SCAN",
+        "NUCHAL",
+        "ANOMALY",
+        "TIFFA",
+        "LEVEL II",
+        "GROWTH",
+        "BPP",
+        "LMP",
+        "EDD",
+        "GESTATION",
+        "POG",
+        "PELVIS",
+        "PELVIC",
+        "TVS",
+        "TRANSVAGINAL",
+        "UTERUS",
+        "OVARY",
+        "OVARIAN",
+        "FOLLICLE",
+        "FOLLICULAR"
+      ],
+      "match": "word"
+    },
+    {
+      "order": 8,
+      "reason": "MEDICO_LEGAL",
+      "type": "flag_or_keywords",
+      "flag": "MEDICO_LEGAL",
+      "fields": [
+        "report",
+        "StudyDescription"
+      ],
+      "keywords": [
+        "MLC",
+        "MEDICO-LEGAL",
+        "MEDICOLEGAL",
+        "MEDICO LEGAL",
+        "POLICE",
+        "FIR",
+        "ASSAULT",
+        "POST-MORTEM",
+        "POSTMORTEM",
+        "AUTOPSY",
+        "COURT"
+      ],
+      "match": "word"
+    },
+    {
+      "order": 9,
+      "reason": "SENSITIVE_REFERRAL",
+      "type": "keywords",
+      "fields": [
+        "report"
+      ],
+      "keywords": [
+        "HIV",
+        "RVD",
+        "RETROVIRAL",
+        "PLHIV",
+        "PSYCHIATR",
+        "DE-ADDICTION",
+        "DEADDICTION",
+        "DETOX",
+        "SUBSTANCE",
+        "FORENSIC"
+      ],
+      "match": "prefix"
+    },
+    {
+      "order": 10,
+      "reason": "FACE_BEARING",
+      "type": "keywords_quarantine",
+      "modalities": [
+        "CT",
+        "MR"
+      ],
+      "fields": [
+        "BodyPartExamined",
+        "StudyDescription",
+        "SeriesDescription",
+        "ProtocolName"
+      ],
+      "keywords": [
+        "HEAD",
+        "BRAIN",
+        "SKULL",
+        "NECK",
+        "FACE",
+        "SINUS",
+        "ORBIT",
+        "PNS",
+        "TMJ",
+        "DENTAL",
+        "MANDIBLE",
+        "MAXILLA",
+        "CBCT"
+      ],
+      "also": [
+        "any CBCT study",
+        "DX/PX dental with LAT, CEPH or CEPHALO"
+      ],
+      "action": "quarantine"
+    },
+    {
+      "order": 11,
+      "reason": "SCREEN_SAVE_DOSE",
+      "type": "image",
+      "condition": "ImageType contains SCREEN SAVE or DOSE, or secondary capture in a CT study"
+    },
+    {
+      "order": 11,
+      "reason": "NON_IMAGE",
+      "type": "image",
+      "condition": "encapsulated PDF, no PixelData, or not DICOM"
+    },
+    {
+      "order": 11,
+      "reason": "OCR_UNCLEARED",
+      "type": "image",
+      "condition": "burned-in text remains after masking, or OCR unavailable for US/SC/OT/BurnedInAnnotation=YES"
+    }
+  ],
+  "reviewer_exclusion_reasons": [
+    "MEDICO_LEGAL",
+    "SENSITIVE_REFERRAL",
+    "STAFF_VIP_RECOGNISED",
+    "PREGNANCY_VISIBLE",
+    "FACE_VISIBLE",
+    "OTHER"
+  ]
+}
