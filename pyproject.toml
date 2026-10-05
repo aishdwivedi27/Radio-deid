@@ -39,6 +39,7 @@ include = ["app*"]
 testpaths = ["tests"]
 addopts = "-q"
 pythonpath = ["."]
+filterwarnings = ["ignore:Using `httpx` with `starlette.testclient`"]
 
 [tool.ruff]
 line-length = 110

@@ -1,0 +1,4 @@
+# Public NEMA DICOM WG04 test radiographs (already anonymised by the publisher; see reference/samples/SOURCE.txt).
+# Exempt from the synthetic-marker check by exact SHA-256 only (DECISIONS D-008). Never add a real patient file.
+946f28f48b9fbf360196a9b835c8fce83b0c654bf85a5107663c8a61df02e498  chest_pa_RG1.dcm
+6babfc42dd404213e1758d6dbb93648c248783cc23f593103fff4295c3374dfb  tibia_RG3.dcm
