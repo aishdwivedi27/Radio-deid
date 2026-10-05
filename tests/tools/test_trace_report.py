@@ -21,8 +21,8 @@ def _fake_repo(tmp_path: Path, test_tags: str) -> Path:
 
 
 def test_expand_range() -> None:
-    assert trace_report.expand("TR-QA-01..03") == ["TR-QA-01", "TR-QA-02", "TR-QA-03"]
-    assert trace_report.find_trs("x TR-REL-NF-01 y") == {"TR-REL-NF-01"}
+    assert trace_report.expand("TR-ZZ-01..03") == ["TR-ZZ-01", "TR-ZZ-02", "TR-ZZ-03"]
+    assert trace_report.find_trs("x TR-ZZ-NF-01 y") == {"TR-ZZ-NF-01"}
 
 
 def test_due_tr_without_test_fails(tmp_path: Path) -> None:
