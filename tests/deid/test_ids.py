@@ -41,9 +41,11 @@ def test_image_id_width_and_suffix() -> None:  # TR-DEID-09, D-016
 def test_image_id_keeps_rightmost_digits() -> None:  # TR-DEID-09, D-016
     alloc = ps.ImageIdAllocator("S0123456789AB")
     assert alloc.allocate(2345, 1) == "S0123456789AB-2345-000001"
-    assert alloc.allocate(12345, 1) == "S0123456789AB-2345-000001-b"   # 12345 -> 2345, collides -> -b
+    assert alloc.allocate(12345, 1) == "S0123456789AB-2345-000001-b"  # 12345 -> 2345, collides -> -b
     assert alloc.allocate(7, 1234567) == "S0123456789AB-0007-234567"
     assert alloc.truncated == 2
     again = ps.ImageIdAllocator("S0123456789AB")
     assert [again.allocate(2345, 1), again.allocate(12345, 1)] == [
-        "S0123456789AB-2345-000001", "S0123456789AB-2345-000001-b"]
+        "S0123456789AB-2345-000001",
+        "S0123456789AB-2345-000001-b",
+    ]

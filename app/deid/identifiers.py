@@ -18,10 +18,26 @@ from app.deid.types import Identifiers
 MIN_LEN = 3
 SYNTHETIC_PREFIX = "DEMO-"
 _TITLES = {"dr", "mr", "mrs", "ms", "smt", "shri", "sri", "miss", "kumari", "master", "baby"}
-_ID_TAGS = ("PatientID", "AccessionNumber", "OtherPatientIDs", "PatientAddress", "PatientTelephoneNumbers",
-            "InstitutionName", "InstitutionAddress", "StationName", "DeviceSerialNumber")
-_NAME_TAGS = ("PatientName", "ReferringPhysicianName", "PerformingPhysicianName", "OperatorsName",
-              "NameOfPhysiciansReadingStudy", "PatientMotherBirthName", "OtherPatientNames")
+_ID_TAGS = (
+    "PatientID",
+    "AccessionNumber",
+    "OtherPatientIDs",
+    "PatientAddress",
+    "PatientTelephoneNumbers",
+    "InstitutionName",
+    "InstitutionAddress",
+    "StationName",
+    "DeviceSerialNumber",
+)
+_NAME_TAGS = (
+    "PatientName",
+    "ReferringPhysicianName",
+    "PerformingPhysicianName",
+    "OperatorsName",
+    "NameOfPhysiciansReadingStudy",
+    "PatientMotherBirthName",
+    "OtherPatientNames",
+)
 _UID_TAGS = ("StudyInstanceUID", "SeriesInstanceUID", "SOPInstanceUID", "FrameOfReferenceUID")
 _DATE_TAGS = ("StudyDate", "SeriesDate", "AcquisitionDate", "ContentDate", "PatientBirthDate")
 
@@ -39,8 +55,19 @@ def parse_da(value: object) -> dt.date | None:
 
 
 def date_forms(d: dt.date) -> set[str]:
-    return {d.strftime(f) for f in ("%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y", "%Y%m%d", "%Y-%m-%d", "%d %b %Y",
-                                    "%d %B %Y", "%d/%m/%y")}
+    return {
+        d.strftime(f)
+        for f in (
+            "%d/%m/%Y",
+            "%d-%m-%Y",
+            "%d.%m.%Y",
+            "%Y%m%d",
+            "%Y-%m-%d",
+            "%d %b %Y",
+            "%d %B %Y",
+            "%d/%m/%y",
+        )
+    }
 
 
 def _multi(ds: Dataset, tag: str) -> list[str]:
@@ -78,7 +105,7 @@ def known_identifiers(ds: Dataset) -> set[str]:
                     vals.add(part)
     pid = str(ds.get("PatientID", "") or "")
     if pid.upper().startswith(SYNTHETIC_PREFIX) and len(pid) - len(SYNTHETIC_PREFIX) >= MIN_LEN:
-        vals.add(pid[len(SYNTHETIC_PREFIX):])  # the synthetic marker is not part of the planted ID (X9)
+        vals.add(pid[len(SYNTHETIC_PREFIX) :])  # the synthetic marker is not part of the planted ID (X9)
     vals.update(u for t in _UID_TAGS if len(u := str(ds.get(t, "") or "")) >= MIN_LEN)
     dob = parse_da(ds.get("PatientBirthDate", ""))
     if dob:

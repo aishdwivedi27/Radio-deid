@@ -17,7 +17,12 @@ from app.deid.types import InputIndex, SourceFile, StudyGroup
 REPORT_SUFFIXES = {".txt", ".docx", ".pdf"}
 DICOMDIR_SOP_CLASS = "1.2.840.10008.1.3.10"
 _HEADER_KEYWORDS = [
-    "StudyInstanceUID", "SOPInstanceUID", "PatientID", "AccessionNumber", "SeriesNumber", "InstanceNumber",
+    "StudyInstanceUID",
+    "SOPInstanceUID",
+    "PatientID",
+    "AccessionNumber",
+    "SeriesNumber",
+    "InstanceNumber",
 ]
 
 
@@ -70,16 +75,21 @@ def index_input(input_dir: Path) -> InputIndex:
             skipped["dicomdir"] += 1
             continue
         uid = str(ds.get("StudyInstanceUID", "") or "") or f"folder:{path.parent}"
-        group = studies.setdefault(uid, StudyGroup(
-            study_uid=uid,
-            patient_id=str(ds.get("PatientID", "") or ""),
-            accession=str(ds.get("AccessionNumber", "") or ""),
-        ))
-        group.files.append(SourceFile(
-            path=path,
-            sop_uid=str(ds.get("SOPInstanceUID", "") or path.name),
-            series_number=_as_int(ds.get("SeriesNumber")),
-            instance_number=_as_int(ds.get("InstanceNumber")),
-        ))
+        group = studies.setdefault(
+            uid,
+            StudyGroup(
+                study_uid=uid,
+                patient_id=str(ds.get("PatientID", "") or ""),
+                accession=str(ds.get("AccessionNumber", "") or ""),
+            ),
+        )
+        group.files.append(
+            SourceFile(
+                path=path,
+                sop_uid=str(ds.get("SOPInstanceUID", "") or path.name),
+                series_number=_as_int(ds.get("SeriesNumber")),
+                instance_number=_as_int(ds.get("InstanceNumber")),
+            )
+        )
         group.folders.add(path.parent)
     return InputIndex(studies=list(studies.values()), reports=reports, skipped=skipped)
