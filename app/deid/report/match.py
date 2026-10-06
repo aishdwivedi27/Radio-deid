@@ -1,4 +1,4 @@
-"""Match reports to studies by ID only (SPEC §6.2; CLAUDE.md rule 16). TR-RPT-03, TR-RPT-06.
+"""Match reports to studies by ID only (SPEC §6.2; CLAUDE.md rule 16). TR-RPT-01, TR-RPT-06.
 
 Tiers, in order:
 1. the study's accession number appears in the report's file name as a whole token;

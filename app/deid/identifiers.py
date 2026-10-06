@@ -1,7 +1,8 @@
 """Identifiers taken from a study's own original headers (SPEC §6.1 A2, §6.2 layer 2). TR-QA-04.
 
 Port of ``reference/deid_prototype/core.known_identifiers`` (29 Sep 2026) with the vendor exception, plus
-address parts, digit-only phone numbers and more date-of-birth formats. Matching is case-insensitive and on
+address parts, digit-only phone numbers and more date-of-birth formats. Matching is case-insensitive. Values
+of 5+ characters match anywhere (OCR'd reports often lose spaces: "FirstnameSurname"); shorter values only on
 token boundaries, so the operator name part "Tech" does not match the word "Technique".
 """
 
@@ -16,6 +17,7 @@ from pydicom.dataset import Dataset
 from app.deid.types import Identifiers
 
 MIN_LEN = 3
+ANYWHERE_LEN = 5
 SYNTHETIC_PREFIX = "DEMO-"
 _TITLES = {"dr", "mr", "mrs", "ms", "smt", "shri", "sri", "miss", "kumari", "master", "baby"}
 _ID_TAGS = (
@@ -127,9 +129,12 @@ def collect(datasets: Iterable[Dataset]) -> Identifiers:
 
 
 def identifier_regex(values: Iterable[str]) -> re.Pattern[str] | None:
-    """One case-insensitive pattern for all identifiers, longest first, on alphanumeric token boundaries."""
+    """One case-insensitive pattern for all identifiers, longest first (see module docstring)."""
     items = sorted({v for v in values if len(v) >= MIN_LEN}, key=len, reverse=True)
     if not items:
         return None
-    alts = "|".join(re.escape(v) for v in items)
-    return re.compile(rf"(?<![A-Za-z0-9])(?:{alts})(?![A-Za-z0-9])", re.IGNORECASE)
+    alts = [
+        re.escape(v) if len(v) >= ANYWHERE_LEN else rf"(?<![A-Za-z0-9]){re.escape(v)}(?![A-Za-z0-9])"
+        for v in items
+    ]
+    return re.compile("|".join(alts), re.IGNORECASE)

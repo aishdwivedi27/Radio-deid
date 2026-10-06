@@ -1,4 +1,4 @@
-"""The de-identified report header block (SPEC §3.1). TR-RPT-01, TR-QA-02 (C4).
+"""The de-identified report header block (SPEC §3.1). TR-RPT-02, TR-QA-02 (C4).
 
 DE-IDENTIFIED REPORT
 Record ID: S7DB2DCB7C0A0

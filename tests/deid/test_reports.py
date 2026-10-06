@@ -1,6 +1,6 @@
 """Reports: reading, ID-only matching, redaction layers, header block (SPEC §6.2, §3.1; T19, T32).
 
-TR-RPT-01, TR-RPT-02, TR-RPT-03, TR-RPT-04, TR-RPT-06.
+TR-RPT-02, TR-RPT-03, TR-RPT-01, TR-RPT-04, TR-RPT-06.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ from app.deid.report.redact import redact_report, residual_patterns
 from tests.deid.helpers import write_study
 
 
-def test_sample_reports_matched(sample_inbox: Path) -> None:  # TR-RPT-03
+def test_sample_reports_matched(sample_inbox: Path) -> None:  # TR-RPT-01
     idx = index_input(sample_inbox)
     m = match_reports(idx)
     assert len(m.by_study) == 4 and m.unmatched == []
@@ -33,7 +33,7 @@ def test_sample_reports_matched(sample_inbox: Path) -> None:  # TR-RPT-03
     assert fmts == [("docx", "native"), ("pdf", "native"), ("pdf", "ocr"), ("txt", "native")]
 
 
-def test_docx_table_cells_read(tmp_path: Path) -> None:  # TR-RPT-01
+def test_docx_table_cells_read(tmp_path: Path) -> None:  # TR-RPT-02
     d = docx.Document()
     d.add_paragraph("CT THORAX")
     table = d.add_table(rows=1, cols=2)
@@ -51,7 +51,7 @@ def _image_page(lines: list[str]) -> Image.Image:
     return img
 
 
-def test_mixed_pdf_page_by_page(tmp_path: Path) -> None:  # TR-RPT-01
+def test_mixed_pdf_page_by_page(tmp_path: Path) -> None:  # TR-RPT-02
     path = tmp_path / "mixed.pdf"
     c = canvas.Canvas(str(path), pagesize=A4)
     c.setAuthor("Dr Neha Gupta")
@@ -65,7 +65,7 @@ def test_mixed_pdf_page_by_page(tmp_path: Path) -> None:  # TR-RPT-01
     assert "Gupta" not in rep.text  # PDF metadata is never read
 
 
-def test_titled_names_and_patterns() -> None:  # TR-RPT-02
+def test_titled_names_and_patterns() -> None:  # TR-RPT-03
     text = "Reported by Dr.Kavita Menon\nDR. ANIL DESHPANDE, MD\nCall +91 98220 45671, ananya.p@example.com"
     out, counts = redact_report(text, frozenset(), use_ner=False)
     for leak in ("Kavita", "Menon", "DESHPANDE", "98220", "example.com"):
@@ -73,7 +73,7 @@ def test_titled_names_and_patterns() -> None:  # TR-RPT-02
     assert counts["NAME"] == 2 and residual_patterns(out) == []
 
 
-def test_header_identifiers_on_token_boundaries() -> None:  # TR-RPT-02
+def test_header_identifiers_on_token_boundaries() -> None:  # TR-RPT-03
     out, counts = redact_report("Technique: plain. Tech Sunil present.", frozenset({"Tech", "Sunil"}), False)
     assert out.startswith("Technique") and "Sunil" not in out and counts["KNOWN_ID"] == 2
 
@@ -125,7 +125,7 @@ def test_ambiguous_reports_unmatched(tmp_path: Path) -> None:  # TR-RPT-06
     assert m.by_study == {} and len(m.unmatched) == 4
 
 
-def test_patient_id_tier(tmp_path: Path) -> None:  # TR-RPT-03
+def test_patient_id_tier(tmp_path: Path) -> None:  # TR-RPT-01
     inbox = tmp_path / "in"
     write_study(inbox / "s1", accession="", patient_id="DEMO-UHID-5001")
     write_study(inbox / "s2", accession="", patient_id="DEMO-UHID-5002")
@@ -137,14 +137,14 @@ def test_patient_id_tier(tmp_path: Path) -> None:  # TR-RPT-03
     assert list(m.tier.values()) == ["patient_id"] and len(m.unmatched) == 1
 
 
-def test_header_round_trip() -> None:  # TR-RPT-01
+def test_header_round_trip() -> None:  # TR-RPT-02
     text = header.build_report("S0123456789AB", "P0123456789AB", ["S0123456789AB-0002-000001"], "Body\n")
     parsed = header.parse_header(text)
     assert parsed == header.ReportHeader("S0123456789AB", "P0123456789AB", ("S0123456789AB-0002-000001",))
     assert text.endswith("Body\n") and header.parse_header("garbage") is None
 
 
-def test_ner_makes_no_network_calls(monkeypatch: pytest.MonkeyPatch) -> None:  # TR-RPT-02, CLAUDE.md rule 15
+def test_ner_makes_no_network_calls(monkeypatch: pytest.MonkeyPatch) -> None:  # TR-RPT-03, CLAUDE.md rule 15
     def refuse(*_a: object, **_k: object) -> None:
         raise AssertionError("outbound network call")
 

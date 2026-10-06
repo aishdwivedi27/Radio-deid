@@ -1,4 +1,4 @@
-"""Layer 4: names and places by NER (SPEC §6.2). TR-RPT-02. Port of ``reference/deid_prototype/text_ner``.
+"""Layer 4: names and places by NER (SPEC §6.2). TR-RPT-03. Port of ``reference/deid_prototype/text_ner``.
 
 Presidio + spaCy ``en_core_web_sm``, PERSON and LOCATION with score ≥ 0.6. The small model over-calls
 clinical phrases as names, so a span is redacted only if every word is Title-case and none is a clinical

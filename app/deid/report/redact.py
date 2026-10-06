@@ -1,4 +1,4 @@
-"""Report redaction, layers 1-3, and the full layer order (SPEC §6.2). TR-RPT-02, TR-RPT-04.
+"""Report redaction, layers 1-3, and the full layer order (SPEC §6.2). TR-RPT-03, TR-RPT-04.
 
 Port of ``reference/deid_prototype/core.LABEL_LINE`` / ``REGEX_RULES`` / ``redact_report`` with:
 - header identifiers matched on token boundaries (layer 2, vendor exception applied when collected);

@@ -1,4 +1,4 @@
-"""Free-text scrubbing for allowlisted text fields (SPEC §6.0 handling code ``scrub``). TR-DEID-03."""
+"""Free-text scrubbing for allowlisted text fields (SPEC §6.0 handling code ``scrub``). TR-DEID-06."""
 
 from __future__ import annotations
 

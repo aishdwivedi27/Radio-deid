@@ -28,3 +28,20 @@ def run(image: np.ndarray) -> list[tuple[list[list[float]], str, float]]:
         _engine = RapidOCR(max_side_len=MAX_SIDE, text_score=0.0)
     result, _ = _engine(image, text_score=0.0)
     return [(box, str(text), float(score or 0)) for box, text, score in (result or [])]
+
+
+_doc_engine: Any = None
+DOC_TEXT_SCORE = 0.5
+
+
+def run_document(image: np.ndarray) -> list[tuple[list[list[float]], str, float]]:
+    """OCR a scanned report page (SPEC §6.2). Unlike burned-in text masking, the goal here is to READ the
+    text: default detector size, no text-angle classifier (it flipped whole report lines in testing) and
+    only confidently read boxes. Unread text cannot leak; the reviewer sees an OCR banner."""
+    global _doc_engine
+    if _doc_engine is None:
+        from rapidocr_onnxruntime import RapidOCR
+
+        _doc_engine = RapidOCR()
+    result, _ = _doc_engine(image, use_cls=False, text_score=DOC_TEXT_SCORE)
+    return [(box, str(text), float(score or 0)) for box, text, score in (result or [])]

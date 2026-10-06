@@ -1,7 +1,7 @@
-"""Deterministic de-identification numbers (SPEC §3). TR-DEID-09.
+"""Deterministic de-identification numbers (SPEC §3). TR-DEID-03.
 
 All IDs are HMAC-SHA256 with the centre's key: the same study and key always give the same IDs, and nobody
-without the key can recompute them. Pseudonymised, not anonymised.
+without the key can recompute them. The data is pseudonymised: the centre keeps the key.
 """
 
 from __future__ import annotations

@@ -47,7 +47,7 @@ def _xray(
     return x, a, m
 
 
-def test_t23_small_text_on_large_image() -> None:  # T23, TR-QA-05
+def test_t23_small_text_on_large_image() -> None:  # T23, TR-QA-05, TR-DEID-07
     x, a, m = _xray([(40, 2250, 11, "PATEL ANANYA 9839001122")])
     r = mask.mask_dataset(x)
     assert r.regions >= 1 and r.verified
@@ -55,7 +55,7 @@ def test_t23_small_text_on_large_image() -> None:  # T23, TR-QA-05
     assert mask.text_remaining(x) == 0
 
 
-def test_t24_name_over_anatomy_masked_and_flagged() -> None:  # T24, TR-QA-05
+def test_t24_name_over_anatomy_masked_and_flagged() -> None:  # T24, TR-QA-05, TR-DEID-07
     x, a, m = _xray([(1100, 1100, 40, "SHARMA RAMESH")])
     r = mask.mask_dataset(x)
     assert (x.pixel_array[m] != a[m]).all() and r.interior >= 1
@@ -73,7 +73,7 @@ def test_t25_low_score_box_always_masked(monkeypatch: pytest.MonkeyPatch) -> Non
     assert len(detect.detect(np.zeros((100, 100), np.uint8))) == 2
 
 
-def test_t26_lone_marker_kept() -> None:  # T26, TR-QA-05
+def test_t26_lone_marker_kept() -> None:  # T26, TR-QA-05, TR-DEID-07
     x, _, _ = _xray([(2500, 1900, 70, "R")])
     r = mask.mask_dataset(x)
     assert r.regions == 0 and r.interior == 0

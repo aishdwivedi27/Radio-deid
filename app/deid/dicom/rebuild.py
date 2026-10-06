@@ -1,4 +1,4 @@
-"""Build the de-identified DICOM dataset (SPEC §6.0, §6.1). TR-DEID-01..05, TR-DEID-09.
+"""Build the de-identified DICOM dataset (SPEC §6.0, §6.1). TR-DEID-01..05, TR-DEID-03.
 
 The rule is inverted: start from a NEW EMPTY dataset, copy in only the CORE ∪ PROFILE elements that are
 present (applying each element's handling code), write the GENERATED elements, then rebuild the file meta.

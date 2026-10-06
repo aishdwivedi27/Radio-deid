@@ -1,4 +1,4 @@
-"""Read a report as plain text (SPEC §6.2 "Reading"). TR-RPT-01, TR-RPT-02.
+"""Read a report as plain text (SPEC §6.2 "Reading"). TR-RPT-02, TR-RPT-03.
 
 Port of ``reference/deid_prototype/core.read_report_ex``:
 - .txt  read as UTF-8;
@@ -65,7 +65,7 @@ def _ocr_page(page: object) -> str:
     image = page.render(scale=OCR_DPI / 72).to_pil().convert("RGB")  # type: ignore[attr-defined]
     items = sorted(
         (min(p[1] for p in box), min(p[0] for p in box), text)
-        for box, text, _score in engine.run(np.array(image))
+        for box, text, _score in engine.run_document(np.array(image))
     )
     return "\n".join(group_lines(items, tolerance=12 * OCR_DPI / 200))
 

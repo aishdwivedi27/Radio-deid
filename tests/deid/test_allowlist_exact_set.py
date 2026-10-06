@@ -1,6 +1,6 @@
 """Strict allowlist: exact-set check per modality profile (SPEC §6.0, §6.1 A1, A01 fixtures).
 
-TR-DEID-01, TR-DEID-02, TR-DEID-03, TR-QA-01, TR-CC-01.
+TR-DEID-01, TR-DEID-02, TR-DEID-06, TR-QA-01, TR-CC-01.
 """
 
 from __future__ import annotations
@@ -164,7 +164,7 @@ def test_a1_catches_private_sequence_overlay() -> None:  # TR-QA-01
     )
 
 
-def test_mr_sequence_name_scrubbed() -> None:  # A01 fixture, TR-DEID-03
+def test_mr_sequence_name_scrubbed() -> None:  # A01 fixture, TR-DEID-06
     src = _source("MR")
     src.SequenceName = "T2 SHARMA"
     src.RepetitionTime, src.EchoTime = "4000", "90"
@@ -173,7 +173,7 @@ def test_mr_sequence_name_scrubbed() -> None:  # A01 fixture, TR-DEID-03
     assert check_a1(out, "f.dcm") == []
 
 
-def test_us_region_item_rebuilt() -> None:  # A01 fixture, TR-DEID-01
+def test_us_region_item_rebuilt() -> None:  # A01 fixture, TR-DEID-02
     src = _source("US")
     item = Dataset()
     item.RegionSpatialFormat, item.PhysicalDeltaX = 1, 0.01
@@ -189,7 +189,7 @@ def test_us_region_item_rebuilt() -> None:  # A01 fixture, TR-DEID-01
     assert check_a1(ct, "f.dcm")  # the US exception does not apply to CT
 
 
-def test_generated_and_identity() -> None:  # TR-DEID-02, TR-DEID-05, TR-DEID-09
+def test_generated_and_identity() -> None:  # TR-DEID-01, TR-DEID-03, TR-DEID-05
     src = _source("CR")
     src.StudyDate = "20260901"
     src.PatientBirthDate, src.PatientAge = "19300101", ""
@@ -203,9 +203,21 @@ def test_generated_and_identity() -> None:  # TR-DEID-02, TR-DEID-05, TR-DEID-09
     assert keyword_for_tag(0x00100030) not in out  # PatientBirthDate never kept
 
 
-def test_zero_pixel_spacing_dropped() -> None:  # TR-DEID-06 (A6)
+def test_zero_pixel_spacing_dropped() -> None:  # TR-DEID-08 (A6)
     src = _source("CR")
     src.PixelSpacing = [0, 0]
     src.ImagerPixelSpacing = [0.1, 0.1]
     out = build_dataset(src, policy_for("CR"), _ctx(src))
     assert "PixelSpacing" not in out and "ImagerPixelSpacing" in out
+
+
+def test_size_and_weight_never_kept() -> None:  # TR-DEID-11
+    al = load_allowlist()
+    keywords = {
+        e["keyword"] for e in (*al.core, *al.generated, *(e for p in al.profiles.values() for e in p))
+    }
+    assert not {"PatientSize", "PatientWeight"} & keywords
+    src = _source("CR")
+    src.PatientSize, src.PatientWeight = "1.7", "70"
+    out = build_dataset(src, policy_for("CR"), _ctx(src))
+    assert "PatientSize" not in out and "PatientWeight" not in out

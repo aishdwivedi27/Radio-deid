@@ -122,6 +122,7 @@ class PendingRecord:
     status: Status
     record_id: str = ""
     patient_code: str = ""
+    study_key: str = ""  # full HMAC of the original StudyInstanceUID (exclusions.csv, C7)
     folder: Path | None = None
     record_row: dict[str, Any] | None = None
     image_rows: list[dict[str, Any]] = field(default_factory=list)

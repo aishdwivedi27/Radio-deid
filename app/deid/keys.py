@@ -1,4 +1,4 @@
-"""The centre's HMAC key (SPEC §3, §5.1). TR-DEID-09.
+"""The centre's HMAC key (SPEC §3, §5.1). TR-DEID-03.
 
 The key is stored as hex in ``app_data/secret.key`` with owner-only permissions. Only its fingerprint
 (first 16 hex of sha256) is ever shown or written to a row; the key itself never is.

@@ -179,3 +179,22 @@ def screen(
         consent_basis=basis,
         rules_version=version,
     )
+
+
+_ABDOMEN = re.compile(r"(?<![A-Za-z0-9])(?:ABDOMEN|ABDOMINAL|ABD)(?![A-Za-z0-9])", re.IGNORECASE)
+_DESCRIPTIVE = ("BodyPartExamined", "StudyDescription", "SeriesDescription", "ProtocolName")
+PREGNANCY_AGES = range(18, 56)
+
+
+def review_flags(headers: Sequence[Dataset]) -> list[str]:
+    """Flags that make a reviewer checkbox mandatory (SPEC §6.3; TR-ELIG-03, TR-REV-02).
+
+    PREGNANCY_CHECK: abdominal ultrasound, female, age 18-55 ("No pregnancy visible" must be ticked).
+    """
+    study = Study(headers, None, "")
+    female = any(str(d.get("PatientSex", "")).upper() == "F" for d in headers)
+    years = age_years(study.age()[0])
+    abdominal = any(_ABDOMEN.search(v) for f in _DESCRIPTIVE for v in study.field_values(f))
+    if "US" in study.modalities and female and years in PREGNANCY_AGES and abdominal:
+        return ["PREGNANCY_CHECK"]
+    return []
