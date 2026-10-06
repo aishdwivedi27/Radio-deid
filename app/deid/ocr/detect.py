@@ -31,7 +31,8 @@ def to8(frame: np.ndarray, mono1: bool) -> np.ndarray:
     f = np.clip((f - lo) / max(float(hi - lo), 1e-6), 0, 1) * 255
     if mono1:
         f = 255 - f
-    return f.astype(np.uint8)
+    out: np.ndarray = f.astype(np.uint8)
+    return out
 
 
 def is_kept_marker(text: str, score: float) -> bool:

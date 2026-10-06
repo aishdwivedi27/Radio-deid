@@ -67,3 +67,8 @@ python_version = "3.12"
 strict = true
 files = ["app", "tools"]
 exclude = ["^reference/", "^tests/fixtures/"]
+
+[[tool.mypy.overrides]]
+# imaging/NLP libraries without type information
+module = ["rapidocr_onnxruntime.*", "presidio_analyzer.*", "spacy.*", "docx.*", "pypdfium2.*"]
+ignore_missing_imports = true
