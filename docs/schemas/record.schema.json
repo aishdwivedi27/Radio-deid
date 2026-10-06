@@ -95,7 +95,7 @@
       "type": "array",
       "items": {
         "type": "string",
-        "pattern": "^S[0-9A-F]{12}-[0-9]{3}-[0-9]{5}(-[b-z])?$"
+        "pattern": "^S[0-9A-F]{12}-[0-9]{4}-[0-9]{6}(-[b-z])?$"
       },
       "minItems": 1,
       "uniqueItems": true

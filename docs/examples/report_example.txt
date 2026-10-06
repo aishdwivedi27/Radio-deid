@@ -1,7 +1,7 @@
 DE-IDENTIFIED REPORT
 Record ID: S7DB2DCB7C0A0
 Patient code: P3F9A1C07B2E4
-Images: S7DB2DCB7C0A0-002-00001
+Images: S7DB2DCB7C0A0-0002-000001
 ------------------------------------------------------------
 [REDACTED], PUNE
 Patient Name: [REDACTED]

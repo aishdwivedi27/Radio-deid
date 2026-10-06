@@ -8,6 +8,17 @@ dependencies = [
     "uvicorn>=0.30",
     "sqlalchemy>=2.0",
     "alembic>=1.13",
+    # de-identification core (app/deid)
+    "pydicom>=3.0",
+    "numpy>=2.0",
+    "pillow>=10.4",
+    "python-docx>=1.1",
+    "pypdfium2>=4.30",
+    "rapidocr-onnxruntime>=1.4,<1.5",  # bundles its ONNX models; no download at runtime
+    "onnxruntime>=1.19",
+    "presidio-analyzer>=2.2",
+    "spacy>=3.8,<3.9",
+    "en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
 ]
 
 [project.optional-dependencies]
@@ -20,12 +31,9 @@ dev = [
     "detect-secrets>=1.5",
     "pre-commit>=3.8",
     "uv>=0.4",
+    "jsonschema>=4.23",
     # test fixtures (tests/fixtures/make_sample_data.py)
     "reportlab>=4.2",
-    "pydicom>=3.0",
-    "numpy>=2.0",
-    "pillow>=10.4",
-    "python-docx>=1.1",
 ]
 
 [build-system]

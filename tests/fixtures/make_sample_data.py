@@ -4,6 +4,8 @@ No real patient data is used anywhere.
 
 Copied from reference/make_sample_data.py (Phase 0). Changes (SPEC §16 X9, DECISIONS D-007):
 - output goes to tests/fixtures/sample_inbox/ (or the folder given as the first argument);
+- burned-in text and the scanned PDF use Pillow's bundled scalable font, so the inbox is identical on every OS
+  (Phase 1, DECISIONS D-015; before, Windows/macOS got a 10 px bitmap font and Linux got DejaVu Bold);
 - every DICOM file carries the synthetic markers: InstitutionName = "SYNTHETIC-DEMO" and PatientID = "DEMO-" + the
   fake UHID. The fake institution name stays planted in InstitutionAddress, the burned-in text and the reports,
   so the PHI leak test still covers it.
@@ -87,8 +89,7 @@ def burn(path, lines, corner="tl"):
     mask = Image.new("L", (w, h), 0)
     d = ImageDraw.Draw(mask)
     size = max(14, w // 55)
-    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", size) \
-        if Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf").exists() else ImageFont.load_default()
+    font = ImageFont.load_default(size=size)   # Pillow's bundled scalable font: same pixels on every OS (D-015)
     for i, t in enumerate(lines):
         d.text((int(w * 0.03), int(h * 0.03) + i * int(size * 1.4)), t, fill=255, font=font)
     m = np.asarray(mask) > 128
@@ -115,8 +116,7 @@ def scanned_pdf(path, lines):
     import PIL.JpegImagePlugin, PIL.PdfImagePlugin  # noqa: F401  (register writers)
     img = Image.new("L", (1654, 2339), 255)        # A4 at 200 dpi
     d = ImageDraw.Draw(img)
-    f = Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
-    font = ImageFont.truetype(str(f), 30) if f.exists() else ImageFont.load_default()
+    font = ImageFont.load_default(size=30)          # same font on every OS (D-015)
     y = 140
     for ln in lines:
         d.text((120, y), ln, fill=0, font=font); y += 52
