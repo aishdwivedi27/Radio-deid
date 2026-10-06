@@ -125,7 +125,7 @@ def _face(study: Study, rule: Rule, ctx: ScreenContext) -> str | None:
     mod = ",".join(sorted(study.modalities))
     if study.modalities & set(rule.get("modalities", [])) and (hit := _keyword_hit(study, rule)):
         return ev.face(mod, hit)
-    cbct = {**rule, "keywords": ["CBCT", "CONE BEAM"], "match": "word"}
+    cbct = {**rule, "keywords": ["CBCT"], "match": "word"}  # owner 6 Oct 2026: CBCT keyword only
     if hit := _keyword_hit(study, cbct):
         return ev.face(mod, f"CBCT: {hit}")
     ceph = {**rule, "keywords": ["CEPH", "CEPHALO"], "match": "prefix"}

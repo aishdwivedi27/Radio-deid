@@ -147,3 +147,10 @@ def test_t4_pregnancy_check_flag() -> None:  # T4 (library part), TR-ELIG-03
     assert flags(modality="US", PatientSex="M", PatientAge="030Y", BodyPartExamined="ABDOMEN") == []
     assert flags(modality="US", PatientSex="F", PatientAge="060Y", BodyPartExamined="ABDOMEN") == []
     assert flags(modality="CT", PatientSex="F", PatientAge="030Y", BodyPartExamined="ABDOMEN") == []
+
+
+def test_cone_beam_wording_alone_not_face_bearing() -> (
+    None
+):  # TR-ELIG-07 (owner 6 Oct 2026: CBCT keyword only)
+    assert not _screen(modality="DX", StudyDescription="CONE BEAM IMPLANT PLANNING").excluded
+    assert _screen(modality="DX", StudyDescription="CBCT IMPLANT PLANNING").reason == "FACE_BEARING"

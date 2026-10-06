@@ -65,6 +65,37 @@ def make_ds(
     return ds
 
 
+def burn_text(ds: Dataset, lines: list[str], size: int = 24) -> None:
+    """Burn bright text into the top-left corner of the pixels (synthetic burned-in annotation)."""
+    from PIL import Image, ImageDraw, ImageFont
+
+    arr = ds.pixel_array.copy()
+    mask = Image.new("L", (arr.shape[1], arr.shape[0]))
+    draw = ImageDraw.Draw(mask)
+    for i, line in enumerate(lines):
+        draw.text((20, 20 + i * int(size * 1.4)), line, fill=255, font=ImageFont.load_default(size=size))
+    arr[np.asarray(mask) > 128] = arr.max() if arr.max() > 0 else 255
+    ds.PixelData = arr.tobytes()
+
+
+def transcode(path: Path, syntax: str) -> None:
+    """Re-encode a DICOM file in place with GDCM, e.g. syntax = "JPEGLosslessProcess14_1"."""
+    import gdcm
+
+    reader = gdcm.ImageReader()
+    reader.SetFileName(str(path))
+    assert reader.Read()
+    change = gdcm.ImageChangeTransferSyntax()
+    change.SetTransferSyntax(gdcm.TransferSyntax(getattr(gdcm.TransferSyntax, syntax)))
+    change.SetInput(reader.GetImage())
+    assert change.Change()
+    writer = gdcm.ImageWriter()
+    writer.SetFileName(str(path))
+    writer.SetFile(reader.GetFile())
+    writer.SetImage(change.GetOutput())
+    assert writer.Write()
+
+
 def write_study(folder: Path, n: int = 1, **kw: Any) -> str:
     """Write ``n`` images of one study into ``folder``; returns the StudyInstanceUID."""
     uid = kw.pop("study_uid", None) or generate_uid()
