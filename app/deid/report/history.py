@@ -5,7 +5,7 @@
 - Employer: "works at", "employed at/with/by", "employee of" followed by a name.
 - Occupation: words from a lexicon, on clinical-history lines and after an "Occupation:" label.
 - After a relative, the remaining comma-separated parts of the same clause that are 1-3 Title-case words
-  (not clinical terms) are treated as a place ("S/O Ramesh, farmer, Sardhana").
+  (not clinical terms) are treated as a place ("S/O <name>, <occupation>, <village>", fixture T19).
 - Other Title-case words left on a history line are counted as ``HISTORY_FLAG`` for the reviewer.
 Findings and impression text are not changed (only the relative rule applies outside history lines).
 """

@@ -52,7 +52,7 @@ REGEX_RULES: list[tuple[str, re.Pattern[str]]] = [
     ("PIN", re.compile(r"(?<!\d)[1-9]\d{5}(?!\d)")),
     (
         "NAME",
-        # titled name on one line: "Dr. Anil Deshpande", "Dr.Kavita", "DR. ANIL DESHPANDE"
+        # titled name on one line: "Dr. Firstname Surname", "Dr.Firstname", "DR. FIRSTNAME SURNAME"
         re.compile(
             rf"\b{_TITLE}(?:\.[ \t]*|[ \t]+)[A-Z][a-zA-Z]+(?:[ \t]+[A-Z]\.)?(?:[ \t]+[A-Z][a-zA-Z]+){{0,2}}"
         ),
