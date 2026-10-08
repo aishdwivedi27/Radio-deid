@@ -1,7 +1,7 @@
 """A running station for API tests: first-run setup done, one signed-in client per role.
 
-TOTP codes come from a fake clock that moves one 30 s step per code, so codes are never replays. Session
-times use the real clock unless a test patches ``app.auth.sessions.now``. Synthetic data only.
+Sign-in is username + password (no second factor, CR-01). Session times use the real clock unless a test
+patches ``app.auth.sessions.now``. Synthetic data only.
 """
 
 from __future__ import annotations
@@ -11,12 +11,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-import pyotp
 import pytest
 from fastapi.testclient import TestClient
 
 from app.api.main import create_app
-from app.auth import totp
 from app.config import build_settings
 from app.services.context import ServiceContext
 
@@ -29,25 +27,11 @@ ROLE_USERS = {"admin": "admin1", "custodian": "custodian1", "operator": "operato
               "reviewer": "reviewer1", "auditor": "auditor1"}  # fmt: skip
 
 
-class FakeTotpClock:
-    def __init__(self) -> None:
-        self.t = 1_900_000_000.0
-
-    def time(self) -> float:
-        return self.t
-
-    def code(self, secret: str) -> str:
-        self.t += totp.STEP
-        return pyotp.TOTP(secret).at(self.t)
-
-
 @dataclass
 class Station:
     app: Any
     client: TestClient
     root: Path
-    clock: FakeTotpClock
-    secrets: dict[str, str] = field(default_factory=dict)
     passwords: dict[str, str] = field(default_factory=dict)
     ids: dict[str, str] = field(default_factory=dict)
 
@@ -58,35 +42,23 @@ class Station:
     def new_client(self) -> TestClient:
         return TestClient(self.app, base_url=BASE)
 
-    def code(self, username: str) -> str:
-        return self.clock.code(self.secrets[username])
-
     def login(self, username: str) -> TestClient:
+        """Sign in; a temporary password is changed to ``NEW_GOOD`` on the way."""
         c = self.new_client()
         r = c.post("/api/auth/login", json={"username": username, "password": self.passwords[username]})
         assert r.status_code == 200, r.text
         body = r.json()
-        while body["stage"] != "active":
+        if body["stage"] == "password_change":
             c.headers["X-CSRF-Token"] = body["csrf_token"]
-            body = self._next(c, username, body["stage"])
-        c.headers["X-CSRF-Token"] = body["csrf_token"]
-        return c
-
-    def _next(self, c: TestClient, username: str, stage: str) -> dict[str, Any]:
-        if stage == "mfa_pending":
-            r = c.post("/api/auth/totp", json={"code": self.code(username)})
-        elif stage == "password_change":
             r = c.post(
                 "/api/auth/password",
                 json={"current_password": self.passwords[username], "new_password": NEW_GOOD},
             )
-            self.passwords[username] = NEW_GOOD
-        else:  # totp_enrol
-            secret = c.post("/api/auth/totp/enrol").json()["totp_secret"]
-            self.secrets[username] = secret
-            r = c.post("/api/auth/totp/confirm", json={"code": self.code(username)})
-        assert r.status_code == 200, r.text
-        return r.json()  # type: ignore[no-any-return]
+            assert r.status_code == 200, r.text
+            self.passwords[username], body = NEW_GOOD, r.json()
+        assert body["stage"] == "active", body
+        c.headers["X-CSRF-Token"] = body["csrf_token"]
+        return c
 
 
 def run_setup(st: Station, admin: str = "admin1", custodian: str = "custodian1") -> None:
@@ -97,37 +69,24 @@ def run_setup(st: Station, admin: str = "admin1", custodian: str = "custodian1")
             json={"username": name, "password": GOOD, "attest_not_consultant": role == "custodian"},
         )
         assert r.status_code == 200, r.text
-        st.secrets[name], st.passwords[name], st.ids[name] = (
-            r.json()["totp_secret"],
-            GOOD,
-            r.json()["user_id"],
-        )
-        r = c.post(f"/api/setup/{role}/totp", json={"code": st.code(name)})
-        assert r.status_code == 200 and len(r.json()["backup_codes"]) == 10, r.text
+        st.passwords[name], st.ids[name] = GOOD, r.json()["user_id"]
     r = c.post("/api/setup/key")
     assert r.status_code == 200, r.text
 
 
 @pytest.fixture
-def totp_clock(monkeypatch: pytest.MonkeyPatch) -> FakeTotpClock:
-    clock = FakeTotpClock()
-    monkeypatch.setattr(totp, "time", clock)
-    return clock
-
-
-@pytest.fixture
-def fresh(tmp_path: Path, totp_clock: FakeTotpClock) -> Iterator[Station]:
+def fresh(tmp_path: Path) -> Iterator[Station]:
     """A started app with no users (first run)."""
     (tmp_path / "inbox").mkdir()
     settings = build_settings({"data_root": str(tmp_path), "port": 8765})
     app = create_app(web_dist=tmp_path / "no-web", settings=settings)
     with TestClient(app, base_url=BASE) as client:
-        yield Station(app, client, tmp_path, totp_clock)
+        yield Station(app, client, tmp_path)
 
 
 @pytest.fixture
 def station(fresh: Station) -> Station:
-    """Setup done (admin1 + custodian1 with TOTP, key created); no one signed in."""
+    """Setup done (admin1 + custodian1, key created); no one signed in."""
     run_setup(fresh)
     return fresh
 

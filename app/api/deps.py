@@ -55,17 +55,6 @@ def session_dep(request: Request, ctx: Ctx) -> sess.SessionInfo:
     return _session(request, ctx)
 
 
-def stage_dep(*stages: str) -> Callable[..., sess.SessionInfo]:
-    """A session in one of ``stages`` (the login steps before ``active``)."""
-
-    def dep(info: Annotated[sess.SessionInfo, Depends(session_dep)]) -> sess.SessionInfo:
-        if info.stage not in stages:
-            raise AppError(403, "stage", f"This step is not available now (current step: {info.stage}).")
-        return info
-
-    return dep
-
-
 def require(permission: str) -> Callable[..., Actor]:
     def dep(
         request: Request,

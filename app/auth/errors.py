@@ -48,7 +48,9 @@ def gone(message: str) -> AppError:
     return AppError(410, "gone", message)
 
 
-def locked(message: str = "Too many failed attempts. Try again in 15 minutes.") -> AppError:
+def locked(
+    message: str = "This account is locked after failed attempts. Ask an admin to unlock it.",
+) -> AppError:
     return AppError(423, "locked", message)
 
 

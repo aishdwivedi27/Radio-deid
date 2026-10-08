@@ -1,7 +1,7 @@
-"""First-run setup (SPEC §7, §15.5). TR-ROLE-02, TR-SEC-01.
+"""First-run setup (SPEC §7, §15.5; CR-01). TR-ROLE-02, TR-SEC-01.
 
-Steps: create the Admin and enrol TOTP; create the Custodian (a different person, attested as centre staff
-and not the consultant) and enrol TOTP; the Custodian creates the key and sees its fingerprint. Then
+Steps: create the Admin; create the Custodian (a different person, attested as centre staff and not the
+consultant); the Custodian creates the key and sees its fingerprint (no TOTP, CR-01). Then
 ``setup_completed_at`` is written and setup is closed for good. A setup token (cookie) ties the steps
 together so nobody else can finish a half-done setup. The app then starts in pre-approval mode.
 """
@@ -15,10 +15,9 @@ from dataclasses import dataclass
 from sqlalchemy.orm import Session
 
 from app.auth import passwords as pw
-from app.auth.errors import AppError, bad_request, conflict, forbidden, gone
+from app.auth.errors import bad_request, conflict, forbidden, gone
 from app.auth.permissions import ADMIN, CUSTODIAN
 from app.deid.keys import key_fingerprint, load_or_create_key
-from app.services.auth import login
 from app.services.context import ServiceContext, now_iso
 from app.store import audit
 from app.store.models.auth import User
@@ -42,7 +41,7 @@ def _holder(s: Session, role: str) -> User | None:
 @dataclass(frozen=True)
 class SetupState:
     complete: bool
-    next_step: str  # admin | admin_totp | custodian | custodian_totp | key | done
+    next_step: str  # admin | custodian | key | done
 
 
 def state(ctx: ServiceContext) -> SetupState:
@@ -50,16 +49,7 @@ def state(ctx: ServiceContext) -> SetupState:
         if is_complete(s):
             return SetupState(True, "done")
         admin, custodian = _holder(s, ADMIN), _holder(s, CUSTODIAN)
-        if admin is None:
-            step = "admin"
-        elif not admin.totp_secret:
-            step = "admin_totp"
-        elif custodian is None:
-            step = "custodian"
-        elif not custodian.totp_secret:
-            step = "custodian_totp"
-        else:
-            step = "key"
+        step = "admin" if admin is None else "custodian" if custodian is None else "key"
         return SetupState(False, step)
 
 
@@ -83,8 +73,8 @@ def _check_open(ctx: ServiceContext, expected: str, token: str | None) -> None:
 
 def create_first(
     ctx: ServiceContext, role: str, username: str, password: str, token: str | None, attest: bool = False
-) -> tuple[str, str, str, str]:
-    """Create the first Admin or Custodian. Returns (setup token, user_id, TOTP secret, otpauth URI)."""
+) -> tuple[str, str]:
+    """Create the first Admin or Custodian. Returns (setup token, user_id)."""
     _check_open(ctx, role, token)
     username = (username or "").strip()
     if not 3 <= len(username) <= 64:
@@ -113,18 +103,7 @@ def create_first(
         repo.set_roles(s, user.id, {role})
         cfg.put(s, TOKEN, _token_hash(new_token), SETUP_ACTOR, now_iso())
         audit.append_event(s, "user.created", "user", user.id, {"roles": [role], "via": "setup"}, SETUP_ACTOR)
-        user_id = user.id
-    secret, uri = login.start_enrolment(ctx, user_id)
-    return new_token, user_id, secret, uri
-
-
-def confirm_first_totp(ctx: ServiceContext, role: str, code: str, token: str | None) -> list[str]:
-    _check_open(ctx, f"{role}_totp", token)
-    with ctx.db.session() as s:
-        user = _holder(s, role)
-    if user is None:
-        raise AppError(409, "setup_step", "create the account first")
-    return login.confirm_enrolment(ctx, user.id, code)
+        return new_token, user.id
 
 
 def create_key(ctx: ServiceContext, token: str | None) -> str:

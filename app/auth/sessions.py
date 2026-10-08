@@ -1,13 +1,14 @@
-"""Server-side sessions and per-user lockout (SPEC §7). TR-SEC-01.
+"""Server-side sessions and per-user lockout (SPEC §7, CR-01). TR-SEC-01.
 
 The cookie carries a random token; the DB keeps only sha256(token). A session expires after 15 minutes
-idle or 8 hours in total. A new token is issued at every stage change (login, TOTP, password change,
-enrolment), so a token seen before login is never the one used after it. Lockout is per user (D-023):
-5 failures lock the account for 15 minutes.
+idle or 8 hours in total. A new token is issued at login and at every password change, so a token seen
+before login is never the one used after it. Lockout is per user (D-023): 5 consecutive failed passwords
+lock the account until an admin unlocks it (CR-01, D-032); a locked user's sessions stop working.
 """
 
 from __future__ import annotations
 
+import datetime as dt
 import hashlib
 import secrets
 import time
@@ -21,15 +22,14 @@ from app.store.repos import users as repo
 IDLE_SECONDS = 15 * 60
 ABSOLUTE_SECONDS = 8 * 60 * 60
 MAX_FAILURES = 5
-LOCK_SECONDS = 15 * 60
 
-# Session stages: what a session may do next. Only "active" reaches permission-checked routes.
-MFA_PENDING, PASSWORD_CHANGE, TOTP_ENROL, ACTIVE = "mfa_pending", "password_change", "totp_enrol", "active"
-STAGES = (MFA_PENDING, PASSWORD_CHANGE, TOTP_ENROL, ACTIVE)
+# Session stages: a temporary password must be changed before anything else.
+PASSWORD_CHANGE, ACTIVE = "password_change", "active"
+STAGES = (PASSWORD_CHANGE, ACTIVE)
 
 
 def now() -> int:
-    """The clock for sessions and lockout (tests patch this)."""
+    """The clock for sessions (tests patch this)."""
     return int(time.time())
 
 
@@ -72,7 +72,8 @@ def issue(s: Session, user_id: str, stage: str, replaces: str | None = None) -> 
 
 
 def resolve(s: Session, token: str | None) -> AuthSession | None:
-    """The live session for ``token`` (touching ``last_seen``), or None. Expired sessions are deleted."""
+    """The live session for ``token`` (touching ``last_seen``), or None. Expired sessions, and sessions of
+    disabled or locked users, are deleted."""
     if not token:
         return None
     row = repo.get_session(s, token_id(token))
@@ -83,7 +84,7 @@ def resolve(s: Session, token: str | None) -> AuthSession | None:
         repo.delete_session(s, row.id)
         return None
     user = repo.get_user(s, row.user_id)
-    if user is None or user.disabled:
+    if user is None or user.disabled or is_locked(user):
         repo.delete_session(s, row.id)
         return None
     row.last_seen_ts = t
@@ -91,19 +92,17 @@ def resolve(s: Session, token: str | None) -> AuthSession | None:
 
 
 def is_locked(user: User) -> bool:
-    return user.locked_until is not None and user.locked_until > now()
+    return user.locked_at is not None
 
 
 def record_failure(user: User) -> bool:
-    """Count a failed password or TOTP code; returns True if the account is now locked."""
-    if user.locked_until is not None and user.locked_until <= now():
-        user.failed_logins, user.locked_until = 0, None  # an expired lock starts a fresh count
+    """Count a failed password; returns True if the account is (now) locked."""
     user.failed_logins += 1
-    if user.failed_logins >= MAX_FAILURES:
-        user.locked_until = now() + LOCK_SECONDS
-        return True
-    return False
+    if user.failed_logins >= MAX_FAILURES and user.locked_at is None:
+        user.locked_at = dt.datetime.now().astimezone().isoformat(timespec="seconds")
+    return is_locked(user)
 
 
 def clear_failures(user: User) -> None:
-    user.failed_logins, user.locked_until = 0, None
+    """After a correct password, or when an admin unlocks the account."""
+    user.failed_logins, user.locked_at = 0, None

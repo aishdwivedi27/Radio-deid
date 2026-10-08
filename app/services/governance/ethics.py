@@ -1,6 +1,7 @@
 """Ethics configuration and the cohort cap (SPEC §12.1). TR-COH-01..04.
 
-Record an approval (Custodian only, confirmed with TOTP: ``configure_approval``), build the eligibility
+Record an approval (Custodian only, confirmed by typing the password again, CR-01:
+``configure_approval``), build the eligibility
 ``ScreenContext`` from the DB and check the cap at finalisation. Until an approval is active the app is in
 pre-approval mode (SPEC §4.1, TR-COH-05): releases, re-identification samples and catalogue exports call
 ``assert_not_preapproval`` and are refused; no role can override it.
@@ -99,10 +100,10 @@ def cap_hold(s: Session, new_study: bool, new_images: int) -> str | None:
     return CAP_MESSAGE if adding and used + adding > approval.cohort_cap else None
 
 
-def configure_approval(ctx: ServiceContext, actor: Actor, a: ApprovalInput, totp_code: str | None) -> int:
-    """The Custodian records an approval with a fresh TOTP code; this also ends pre-approval mode."""
+def configure_approval(ctx: ServiceContext, actor: Actor, a: ApprovalInput, password: str | None) -> int:
+    """The Custodian records an approval, confirming with their password; this ends pre-approval mode."""
     access.check(ctx, actor, "ethics.configure", "ethics.approval")
-    access.verify_step_up(ctx, actor, totp_code, "ethics.configure", "ethics.approval")
+    access.confirm_password(ctx, actor, password, "ethics.configure", "ethics.approval")
     try:
         return record_approval(ctx, a, actor.user_id)
     except DeidError as exc:

@@ -6,13 +6,12 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-import pyotp
 import pytest
 
 from app.auth import passwords as pw
-from app.auth import totp
+from app.auth import sessions as sess
 from app.auth.errors import AppError
-from app.auth.permissions import RoleError, has_permission, needs_totp, validate_roles
+from app.auth.permissions import RoleError, has_permission, validate_roles
 from app.deid import logsafe
 from app.deid import pseudonyms as ps
 from app.services.governance.lists import parse_csv
@@ -49,25 +48,19 @@ def test_roles() -> None:
     for bad in (["admin", "custodian"], [], ["owner"]):
         with pytest.raises(RoleError):
             validate_roles(bad)
-    assert needs_totp({"custodian"}) and needs_totp({"admin", "reviewer"}) and not needs_totp({"auditor"})
     assert has_permission({"operator", "reviewer"}, "records.review")
     assert not has_permission({"admin"}, "key.manage") and not has_permission({"admin"}, "audit.view")
 
 
-def test_totp_window_replay_and_backup_codes() -> None:
-    secret, t = pyotp.random_base32(), 1_900_000_000.0
-    code = pyotp.TOTP(secret).at(t)
-    step = totp.matching_step(secret, code, None, now=t)
-    assert step == int(t // 30)
-    assert totp.matching_step(secret, code, step, now=t) is None  # replay
-    assert totp.matching_step(secret, pyotp.TOTP(secret).at(t - 30), None, now=t) is not None  # one step back
-    assert totp.matching_step(secret, pyotp.TOTP(secret).at(t - 90), None, now=t) is None
-    assert totp.matching_step(secret, "12345x", None, now=t) is None
-    codes = totp.new_backup_codes()
-    assert len(codes) == 10 and len(set(codes)) == 10
-    h = totp.hash_backup_code(codes[0])
-    assert totp.verify_backup_code(h, codes[0].lower()[:5] + "-" + codes[0][5:])
-    assert not totp.verify_backup_code(h, codes[1])
+def test_lockout_counts_consecutive_failures_and_has_no_time_limit() -> None:
+    from app.store.models.auth import User
+
+    user = User(failed_logins=0, locked_at=None)
+    assert [sess.record_failure(user) for _ in range(5)] == [False, False, False, False, True]
+    first_lock = user.locked_at
+    assert first_lock and sess.record_failure(user) and user.locked_at == first_lock  # stays locked
+    sess.clear_failures(user)
+    assert not sess.is_locked(user) and user.failed_logins == 0
 
 
 # SPEC §7 audit list, phrase by phrase, and the registered action names that implement each phrase.

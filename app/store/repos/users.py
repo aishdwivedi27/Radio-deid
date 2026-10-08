@@ -7,7 +7,7 @@ from collections.abc import Iterable, Sequence
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from app.store.models.auth import AuthSession, BackupCode, User, UserRole
+from app.store.models.auth import AuthSession, User, UserRole
 
 
 def count_users(s: Session) -> int:
@@ -64,14 +64,3 @@ def delete_user_sessions(s: Session, user_id: str, keep: str | None = None) -> i
     if keep:
         q = q.where(AuthSession.id != keep)
     return s.execute(q).rowcount or 0  # type: ignore[attr-defined]
-
-
-def replace_backup_codes(s: Session, user_id: str, hashes: Iterable[str]) -> None:
-    s.execute(delete(BackupCode).where(BackupCode.user_id == user_id))
-    s.add_all(BackupCode(user_id=user_id, code_hash=h) for h in hashes)
-    s.flush()
-
-
-def unused_backup_codes(s: Session, user_id: str) -> Sequence[BackupCode]:
-    q = select(BackupCode).where(BackupCode.user_id == user_id, BackupCode.used_at.is_(None))
-    return s.scalars(q).all()

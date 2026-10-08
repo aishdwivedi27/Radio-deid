@@ -20,7 +20,7 @@ from app.services.governance.ethics import assert_not_preapproval
 from app.services.records.approve import review_decision
 from app.store import audit
 from app.store.repos import settings as cfg
-from tests.api.conftest import Station
+from tests.api.conftest import BAD_GUESS, GOOD, Station
 from tests.deid.helpers import write_study
 from tests.services.conftest import FAST, ingest_folder
 
@@ -37,17 +37,17 @@ def _key(st: Station) -> bytes:
     return load_or_create_key(st.ctx.paths.key_path)
 
 
-def test_leaving_preapproval_needs_custodian_and_totp(staffed: Staffed) -> None:
+def test_leaving_preapproval_needs_custodian_and_password(staffed: Staffed) -> None:
     station, clients = staffed
     with station.ctx.db.session() as s, pytest.raises(AppError) as err:
         assert_not_preapproval(s)
     assert err.value.status == 409
     cust = clients["custodian"]
-    assert cust.post("/api/ethics/approval", json={**APPROVAL, "totp_code": "000000"}).status_code == 403
-    bad = {**APPROVAL, "optout_window_days": 30, "totp_code": station.code("custodian1")}
+    assert cust.post("/api/ethics/approval", json={**APPROVAL, "password": BAD_GUESS}).status_code == 403
+    bad = {**APPROVAL, "optout_window_days": 30, "password": GOOD}
     assert cust.post("/api/ethics/approval", json=bad).status_code == 400
     assert clients["admin"].get("/api/status").json()["preapproval"] is True
-    r = cust.post("/api/ethics/approval", json={**APPROVAL, "totp_code": station.code("custodian1")})
+    r = cust.post("/api/ethics/approval", json={**APPROVAL, "password": GOOD})
     assert r.status_code == 200 and r.json()["preapproval"] is False
     assert clients["operator"].get("/api/status").json() == {
         "setup_required": False, "setup_step": "done", "preapproval": False, "banner": None,

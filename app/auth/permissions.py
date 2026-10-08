@@ -10,7 +10,6 @@ from collections.abc import Iterable
 
 ADMIN, CUSTODIAN, OPERATOR, REVIEWER, AUDITOR = "admin", "custodian", "operator", "reviewer", "auditor"
 ROLES: tuple[str, ...] = (ADMIN, CUSTODIAN, OPERATOR, REVIEWER, AUDITOR)
-TOTP_REQUIRED_ROLES = frozenset({ADMIN, CUSTODIAN})  # SPEC §7 MFA, TR-SEC-01
 EXCLUSIVE_ROLES = frozenset({ADMIN, CUSTODIAN})  # different people (SPEC §7 first run, D-025)
 
 PERMISSIONS: dict[str, frozenset[str]] = {
@@ -42,7 +41,7 @@ PERMISSIONS: dict[str, frozenset[str]] = {
     "records.view": frozenset(ROLES),
     # Audit log view/export; EC annual report export
     "audit.view": frozenset({CUSTODIAN, AUDITOR}),
-    # Custodian rules: granting Custodian needs an existing Custodian with TOTP; an Admin cannot
+    # Custodian rules: granting Custodian needs an existing Custodian (password re-entry, CR-01)
     "custodian.grant": frozenset({CUSTODIAN}),
 }
 
@@ -66,7 +65,3 @@ def validate_roles(roles: Iterable[str]) -> frozenset[str]:
     if EXCLUSIVE_ROLES <= out:
         raise RoleError("admin and custodian cannot be held by the same account")
     return out
-
-
-def needs_totp(roles: Iterable[str]) -> bool:
-    return any(r in TOTP_REQUIRED_ROLES for r in roles)

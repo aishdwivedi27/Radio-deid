@@ -1,4 +1,4 @@
-"""Users, roles, sessions, backup codes, settings and the minimal jobs table (SPEC §2, §7). TR-ROLE-01..04,
+"""Users, roles, sessions, settings and the minimal jobs table (SPEC §2, §7; CR-01). TR-ROLE-01..04,
 TR-SEC-01.
 
 Sessions store only sha256(token). Session times are epoch seconds (compared, never shown). Usernames are
@@ -19,12 +19,9 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(64), unique=True)
     pw_hash: Mapped[str] = mapped_column(String(200))
     must_change_password: Mapped[bool] = mapped_column(Boolean, default=False)
-    totp_secret: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    totp_pending_secret: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    totp_last_step: Mapped[int | None] = mapped_column(Integer, nullable=True)
     disabled: Mapped[bool] = mapped_column(Boolean, default=False)
     failed_logins: Mapped[int] = mapped_column(Integer, default=0)
-    locked_until: Mapped[int | None] = mapped_column(Integer, nullable=True)  # epoch seconds
+    locked_at: Mapped[str | None] = mapped_column(String(32), nullable=True)  # locked until an admin unlocks
     is_consultant: Mapped[bool] = mapped_column(Boolean, default=False)  # TR-ROLE-03 attestation
     created_at: Mapped[str] = mapped_column(String(32))
     created_by: Mapped[str] = mapped_column(String(40))
@@ -40,18 +37,10 @@ class AuthSession(Base):
     __tablename__ = "sessions"
     id: Mapped[str] = mapped_column(String(64), primary_key=True)  # sha256(token) hex
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
-    stage: Mapped[str] = mapped_column(String(20))  # mfa_pending | password_change | totp_enrol | active
+    stage: Mapped[str] = mapped_column(String(20))  # password_change | active
     csrf_token: Mapped[str] = mapped_column(String(64))
     created_ts: Mapped[int] = mapped_column(Integer)
     last_seen_ts: Mapped[int] = mapped_column(Integer)
-
-
-class BackupCode(Base):
-    __tablename__ = "backup_codes"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
-    code_hash: Mapped[str] = mapped_column(String(200))
-    used_at: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 
 class Setting(Base):

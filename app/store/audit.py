@@ -51,8 +51,7 @@ APP_EVENTS: frozenset[str] = frozenset(
     {
         "access.denied",  # a permission check failed (T17)
         "setup.completed",
-        "user.enabled", "user.password_reset", "user.password_changed", "user.admin_reset",
-        "totp.enrolled", "backup_code.used",
+        "user.enabled", "user.unlocked", "user.password_reset", "user.password_changed", "user.admin_reset",
         "key.created", "key.viewed", "key.backup_requested", "key.rotate_requested",
         "reconcile.run",
         "exclusion.verified",  # SPEC §6.4 skip spot-check (Phase 4)

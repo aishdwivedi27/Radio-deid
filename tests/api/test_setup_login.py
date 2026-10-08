@@ -1,8 +1,9 @@
-"""First run, sign-in, sessions, CSRF and lockout (SPEC §7). TR-SEC-01, TR-ROLE-02, TR-COH-05."""
+"""First run, sign-in, sessions, CSRF and lockout (SPEC §7, CR-01). TR-SEC-01, TR-ROLE-02, TR-COH-05."""
 
 from __future__ import annotations
 
 import pytest
+from fastapi.testclient import TestClient
 
 from app.auth import sessions as sess
 from app.store.repos import users as repo
@@ -34,7 +35,7 @@ def test_first_run_only_setup_works_then_closes_for_good(fresh: Station) -> None
         r = c.post(path, json={"username": "late", "password": GOOD})
         assert r.status_code == 410, path
     assert fresh.ctx.paths.key_path.exists()
-    assert {"user.created", "totp.enrolled", "key.created", "setup.completed"} <= set(_actions(fresh))
+    assert {"user.created", "key.created", "setup.completed"} <= set(_actions(fresh))
 
 
 def test_setup_order_custodian_attestation_and_token(fresh: Station) -> None:
@@ -44,10 +45,10 @@ def test_setup_order_custodian_attestation_and_token(fresh: Station) -> None:
     r = c.post("/api/setup/admin", json={"username": "boss", "password": "short"})
     assert r.status_code == 400 and "short" not in r.text
     r = c.post("/api/setup/admin", json={"username": "boss", "password": GOOD})
-    secret = r.json()["totp_secret"]
+    assert r.json()["next_step"] == "custodian"
     other = fresh.new_client()  # a different browser without the setup cookie
-    assert other.post("/api/setup/admin/totp", json={"code": fresh.clock.code(secret)}).status_code == 403
-    assert c.post("/api/setup/admin/totp", json={"code": fresh.clock.code(secret)}).status_code == 200
+    late = {"username": "cust", "password": GOOD, "attest_not_consultant": True}
+    assert other.post("/api/setup/custodian", json=late).status_code == 403
     r = c.post("/api/setup/custodian", json={"username": "cust", "password": GOOD})
     assert r.status_code == 400 and r.json()["error"] == "attestation"
     r = c.post(
@@ -56,15 +57,12 @@ def test_setup_order_custodian_attestation_and_token(fresh: Station) -> None:
     assert r.status_code == 409  # same person (case-insensitive username)
 
 
-def test_login_requires_totp_and_rotates_the_session(station: Station) -> None:
+def test_login_is_password_only_and_rotates_the_session(station: Station) -> None:
     c = station.new_client()
     r = c.post("/api/auth/login", json={"username": "admin1", "password": GOOD})
-    assert r.json()["stage"] == "mfa_pending"
+    assert r.status_code == 200 and r.json()["stage"] == "active"
     pre = c.cookies.get("deid_session")
-    c.headers["X-CSRF-Token"] = r.json()["csrf_token"]
-    assert c.get("/api/users").status_code == 403  # not active yet
-    r = c.post("/api/auth/totp", json={"code": station.code("admin1")})
-    assert r.json()["stage"] == "active"
+    r = c.post("/api/auth/login", json={"username": "admin1", "password": GOOD})  # signs in again
     post = c.cookies.get("deid_session")
     assert pre and post and pre != post
     with station.ctx.db.session() as s:
@@ -74,51 +72,30 @@ def test_login_requires_totp_and_rotates_the_session(station: Station) -> None:
     me = c.get("/api/auth/me").json()
     assert me["roles"] == ["admin"] and "users.manage" in me["permissions"]
     assert "key.manage" not in me["permissions"]
+    for gone_route in ("/api/auth/totp", "/api/auth/totp/enrol", "/api/setup/admin/totp"):
+        assert c.post(gone_route, json={"code": "123456"}).status_code in (404, 405, 410)
 
 
-def test_totp_replay_and_backup_code_used_once(station: Station) -> None:
-    c = station.new_client()
-    r = c.post("/api/auth/login", json={"username": "admin1", "password": GOOD})
-    c.headers["X-CSRF-Token"] = r.json()["csrf_token"]
-    code = station.code("admin1")
-    assert c.post("/api/auth/totp", json={"code": code}).status_code == 200
-    c2 = station.new_client()
-    r = c2.post("/api/auth/login", json={"username": "admin1", "password": GOOD})
-    c2.headers["X-CSRF-Token"] = r.json()["csrf_token"]
-    assert c2.post("/api/auth/totp", json={"code": code}).status_code == 401  # replay
-    # backup codes: re-enrol through admin-reset to learn a fresh set
-    from app.services.auth import login
-
-    with station.ctx.db.session() as s:
-        uid = repo.by_username(s, "admin1").id  # type: ignore[union-attr]
-    login.start_enrolment(station.ctx, uid, may_replace=True)
-    with station.ctx.db.session() as s:
-        pending = repo.get_user(s, uid).totp_pending_secret  # type: ignore[union-attr]
-    codes = login.confirm_enrolment(station.ctx, uid, station.clock.code(pending or ""))
-    station.secrets["admin1"] = pending or ""
-    for expected in (200, 401):
-        c3 = station.new_client()
-        r = c3.post("/api/auth/login", json={"username": "admin1", "password": GOOD})
-        c3.headers["X-CSRF-Token"] = r.json()["csrf_token"]
-        assert c3.post("/api/auth/totp", json={"code": codes[0]}).status_code == expected
-    assert "backup_code.used" in _actions(station)
-
-
-def test_lockout_after_five_failures_for_fifteen_minutes(
-    station: Station, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    now = [2_000_000_000]
-    monkeypatch.setattr(sess, "now", lambda: now[0])
-    c = station.new_client()
+def test_lockout_holds_until_an_admin_unlocks(staffed: tuple[Station, dict[str, TestClient]]) -> None:
+    station, clients = staffed
+    c, who = station.new_client(), {"username": "reviewer1"}
     for _ in range(4):
-        assert (
-            c.post("/api/auth/login", json={"username": "admin1", "password": BAD_GUESS}).status_code == 401
-        )
-    r = c.post("/api/auth/login", json={"username": "admin1", "password": BAD_GUESS})
-    assert r.status_code == 423
-    assert c.post("/api/auth/login", json={"username": "admin1", "password": GOOD}).status_code == 423
-    now[0] += 15 * 60 + 1
-    assert c.post("/api/auth/login", json={"username": "admin1", "password": GOOD}).status_code == 200
+        assert c.post("/api/auth/login", json={**who, "password": BAD_GUESS}).status_code == 401
+    r = c.post("/api/auth/login", json={**who, "password": BAD_GUESS})
+    assert r.status_code == 423 and "Ask an admin" in r.json()["message"]
+    good = {**who, "password": station.passwords["reviewer1"]}
+    assert c.post("/api/auth/login", json=good).status_code == 423
+    assert clients["reviewer"].get("/api/auth/me").status_code == 401  # open sessions stop too
+    with station.ctx.db.transaction() as s:  # no time limit: a day later it is still locked
+        user = repo.by_username(s, "reviewer1")
+        assert user is not None and user.locked_at is not None
+    assert c.post("/api/auth/login", json=good).status_code == 423
+    rid = station.ids["reviewer1"]
+    assert clients["operator"].post(f"/api/users/{rid}/unlock").status_code == 403  # admins only
+    r = clients["admin"].post(f"/api/users/{rid}/unlock")
+    assert r.status_code == 200 and r.json()["locked"] is False
+    assert c.post("/api/auth/login", json=good).status_code == 200
+    assert '"was_locked":true' in _details(station, "user.unlocked")
     # an unknown user gets the same answer and the typed name is not audited
     r = c.post("/api/auth/login", json={"username": "nobody-typed-this", "password": GOOD})
     assert r.status_code == 401 and r.json()["message"] == "Invalid username or password."
@@ -127,6 +104,13 @@ def test_lockout_after_five_failures_for_fifteen_minutes(
 
         blob = " ".join(e.details_json + e.target_id for e in s.query(AuditEvent))
     assert "nobody-typed-this" not in blob and "Wrong-Pass" not in blob
+
+
+def _details(st: Station, action: str) -> str:
+    from app.store.models.audit import AuditEvent
+
+    with st.ctx.db.session() as s:
+        return " ".join(e.details_json for e in s.query(AuditEvent).filter(AuditEvent.action == action))
 
 
 def test_session_idle_and_absolute_expiry(station: Station, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -170,7 +154,7 @@ def test_validation_errors_never_echo_input(station: Station) -> None:
     assert r.status_code == 422 and "PLANTED" not in r.text and "password" in r.text
 
 
-def test_admin_without_totp_must_enrol(station: Station) -> None:
+def test_new_admin_signs_in_with_password_only(station: Station) -> None:
     admin = station.login("admin1")
     r = admin.post("/api/users", json={"username": "admin2", "roles": ["admin"]})
     station.passwords["admin2"] = r.json()["temporary_password"]
@@ -178,13 +162,12 @@ def test_admin_without_totp_must_enrol(station: Station) -> None:
     r = c.post("/api/auth/login", json={"username": "admin2", "password": station.passwords["admin2"]})
     assert r.json()["stage"] == "password_change"
     c.headers["X-CSRF-Token"] = r.json()["csrf_token"]
+    assert c.get("/api/users").status_code == 403  # the temporary password must be changed first
     r = c.post("/api/auth/password", json={"current_password": station.passwords["admin2"],
                                            "new_password": GOOD})  # fmt: skip
-    assert r.json()["stage"] == "totp_enrol"
+    assert r.json()["stage"] == "active"
     c.headers["X-CSRF-Token"] = r.json()["csrf_token"]
-    assert c.get("/api/users").status_code == 403  # admin powers wait for TOTP
-    station.passwords["admin2"] = GOOD
-    assert station.login("admin2").get("/api/users").status_code == 200
+    assert c.get("/api/users").status_code == 200
 
 
 def test_logout_ends_the_session(station: Station) -> None:

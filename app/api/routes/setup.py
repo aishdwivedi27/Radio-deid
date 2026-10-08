@@ -26,10 +26,6 @@ class Account(BaseModel):
     attest_not_consultant: bool = False
 
 
-class Code(BaseModel):
-    code: str
-
-
 @router.get("/status")
 def status(ctx: Ctx) -> dict[str, Any]:
     st = setup.state(ctx)
@@ -62,19 +58,8 @@ def setup_account(
     response: Response,
     ctx: Ctx,
 ) -> dict[str, Any]:
-    token, user_id, secret, uri = setup.create_first(
+    token, user_id = setup.create_first(
         ctx, role, body.username, body.password, request.cookies.get(SETUP_COOKIE), body.attest_not_consultant
     )
     set_cookie(response, SETUP_COOKIE, token, path="/api/setup")
-    return {"user_id": user_id, "totp_secret": secret, "otpauth_uri": uri}
-
-
-@router.post("/setup/{role}/totp")
-def setup_totp(
-    role: Role,
-    body: Code,
-    request: Request,
-    ctx: Ctx,
-) -> dict[str, Any]:
-    codes = setup.confirm_first_totp(ctx, role, body.code, request.cookies.get(SETUP_COOKIE))
-    return {"backup_codes": codes}
+    return {"user_id": user_id, "next_step": setup.state(ctx).next_step}

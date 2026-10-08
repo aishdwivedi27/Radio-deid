@@ -20,7 +20,7 @@ router = APIRouter(prefix="/api")
 
 
 class Approval(BaseModel):
-    totp_code: str
+    password: str  # the Custodian's own password, typed again (CR-01)
     committee_name: str
     approval_ref: str
     protocol_version: str
@@ -43,9 +43,9 @@ def record_approval(
     ctx: Ctx,
     actor: Annotated[Actor, Depends(require("ethics.configure"))],
 ) -> dict[str, Any]:
-    fields = body.model_dump(exclude={"totp_code", "ec_amendment_refs"})
+    fields = body.model_dump(exclude={"password", "ec_amendment_refs"})
     data = ethics.ApprovalInput(**fields, ec_amendment_refs=tuple(body.ec_amendment_refs))
-    approval_id = ethics.configure_approval(ctx, actor, data, body.totp_code)
+    approval_id = ethics.configure_approval(ctx, actor, data, body.password)
     return {"approval_id": approval_id, "preapproval": ethics.is_preapproval(ctx)}
 
 

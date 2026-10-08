@@ -1,8 +1,9 @@
-"""User administration and the Custodian grant (SPEC §2). TR-ROLE-01..04, TR-SEC-03.
+"""User administration and the Custodian grant (SPEC §2; CR-01). TR-ROLE-01..04, TR-SEC-03.
 
 Admins create users (a temporary password shown once; the user must change it at first login), disable or
-re-enable them, reset passwords and assign roles other than Custodian. Only an existing Custodian grants
-Custodian, with TOTP; never to the consultant's account and never to an Admin (D-025). The last active
+re-enable them, unlock locked accounts (D-032), reset passwords and assign roles other than Custodian. Only
+an existing Custodian grants Custodian, confirming with their password (CR-01); never to the consultant's
+account and never to an Admin (D-025). The last active
 Admin and the last active Custodian cannot be disabled or lose that role.
 """
 
@@ -31,7 +32,6 @@ class UserView:
     roles: tuple[str, ...]
     disabled: bool
     locked: bool
-    totp_enrolled: bool
     must_change_password: bool
     is_consultant: bool
     created_at: str
@@ -40,7 +40,7 @@ class UserView:
     def of(cls, s: Session, u: User) -> UserView:
         return cls(
             u.id, u.username, tuple(sorted(repo.roles_of(s, u.id))), u.disabled, sess.is_locked(u),
-            u.totp_secret is not None, u.must_change_password, u.is_consultant, u.created_at,
+            u.must_change_password, u.is_consultant, u.created_at,
         )  # fmt: skip
 
 
@@ -134,6 +134,17 @@ def set_disabled(ctx: ServiceContext, actor: Actor, user_id: str, disabled: bool
         return UserView.of(s, user)
 
 
+def unlock(ctx: ServiceContext, actor: Actor, user_id: str) -> UserView:
+    """Clear a lockout (5 failed passwords lock an account until an admin unlocks it, D-032)."""
+    access.check(ctx, actor, "users.manage", "users.unlock")
+    with ctx.db.transaction() as s:
+        user = _get(s, user_id)
+        was_locked = sess.is_locked(user)
+        sess.clear_failures(user)
+        audit.append_event(s, "user.unlocked", "user", user.id, {"was_locked": was_locked}, actor.user_id)
+        return UserView.of(s, user)
+
+
 def reset_password(ctx: ServiceContext, actor: Actor, user_id: str) -> str:
     access.check(ctx, actor, "users.manage", "users.reset_password")
     temporary = pw.generate_temporary()
@@ -147,12 +158,12 @@ def reset_password(ctx: ServiceContext, actor: Actor, user_id: str) -> str:
 
 
 def grant_custodian(
-    ctx: ServiceContext, actor: Actor, user_id: str, totp_code: str, attest_centre_staff: bool
+    ctx: ServiceContext, actor: Actor, user_id: str, password: str, attest_centre_staff: bool
 ) -> UserView:
-    """An existing Custodian grants Custodian with a fresh TOTP code (TR-ROLE-02). The grantee must enrol
-    TOTP at their next login before any Custodian action (their sessions are ended now)."""
+    """An existing Custodian grants Custodian, typing their own password again (TR-ROLE-02 as changed by
+    CR-01). The grantee's sessions are ended so the new role applies from their next login."""
     access.check(ctx, actor, "custodian.grant", "users.custodian")
-    access.verify_step_up(ctx, actor, totp_code, "custodian.grant", "users.custodian")
+    access.confirm_password(ctx, actor, password, "custodian.grant", "users.custodian")
     if not attest_centre_staff:
         raise bad_request("confirm that this person is centre staff and not the consultant", "attestation")
     with ctx.db.transaction() as s:
@@ -166,13 +177,14 @@ def grant_custodian(
             raise conflict("the user is disabled or already Custodian")
         repo.set_roles(s, user.id, current | {CUSTODIAN})
         repo.delete_user_sessions(s, user.id)
-        details = {"attested_centre_staff": True, "totp_enrolled": user.totp_secret is not None}
+        details = {"attested_centre_staff": True}
         audit.append_event(s, "custodian.granted", "user", user.id, details, actor.user_id)
         return UserView.of(s, user)
 
 
-def admin_reset(ctx: ServiceContext, username: str, reset_totp: bool) -> str:
-    """Command-line recovery for a locked-out user (``python -m app admin-reset``). Audited as ``cli``."""
+def admin_reset(ctx: ServiceContext, username: str) -> str:
+    """Command-line recovery when no admin can sign in (``python -m app admin-reset``): unlock and set a
+    temporary password. Audited as ``cli``."""
     temporary = pw.generate_temporary()
     with ctx.db.transaction() as s:
         user = repo.by_username(s, username)
@@ -180,9 +192,6 @@ def admin_reset(ctx: ServiceContext, username: str, reset_totp: bool) -> str:
             raise not_found("No such user.")
         user.pw_hash, user.must_change_password = pw.hash_password(temporary), True
         sess.clear_failures(user)
-        if reset_totp:
-            user.totp_secret, user.totp_pending_secret, user.totp_last_step = None, None, None
-            repo.replace_backup_codes(s, user.id, [])
         repo.delete_user_sessions(s, user.id)
-        audit.append_event(s, "user.admin_reset", "user", user.id, {"reset_totp": reset_totp}, "cli")
+        audit.append_event(s, "user.admin_reset", "user", user.id, {}, "cli")
     return temporary

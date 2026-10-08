@@ -27,7 +27,7 @@ class Roles(BaseModel):
 
 
 class CustodianGrant(BaseModel):
-    totp_code: str
+    password: str  # the signed-in Custodian's own password, typed again (CR-01)
     attest_centre_staff: bool = False
 
 
@@ -40,7 +40,7 @@ class Toggle(BaseModel):
 
 
 class StepUp(BaseModel):
-    totp_code: str
+    password: str  # the signed-in Custodian's own password, typed again (CR-01)
     confirm: str | None = None
 
 
@@ -90,6 +90,15 @@ def enable(
     return asdict(users.set_disabled(ctx, actor, user_id, False))
 
 
+@router.post("/users/{user_id}/unlock")
+def unlock(
+    user_id: str,
+    ctx: Ctx,
+    actor: Annotated[Actor, Depends(require("users.manage"))],
+) -> dict[str, Any]:
+    return asdict(users.unlock(ctx, actor, user_id))
+
+
 @router.post("/users/{user_id}/reset-password")
 def reset_password(
     user_id: str,
@@ -106,7 +115,7 @@ def grant_custodian(
     ctx: Ctx,
     actor: Annotated[Actor, Depends(require("custodian.grant"))],
 ) -> dict[str, Any]:
-    return asdict(users.grant_custodian(ctx, actor, user_id, body.totp_code, body.attest_centre_staff))
+    return asdict(users.grant_custodian(ctx, actor, user_id, body.password, body.attest_centre_staff))
 
 
 @router.get("/settings")
@@ -150,7 +159,7 @@ def key_backup(
     ctx: Ctx,
     actor: Annotated[Actor, Depends(require("key.manage"))],
 ) -> dict[str, Any]:
-    keys.request_backup(ctx, actor, body.totp_code)
+    keys.request_backup(ctx, actor, body.password)
     return {}
 
 
@@ -160,5 +169,5 @@ def key_rotate(
     ctx: Ctx,
     actor: Annotated[Actor, Depends(require("key.manage"))],
 ) -> dict[str, Any]:
-    keys.request_rotation(ctx, actor, body.totp_code, body.confirm)
+    keys.request_rotation(ctx, actor, body.password, body.confirm)
     return {}

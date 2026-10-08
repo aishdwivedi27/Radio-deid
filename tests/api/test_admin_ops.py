@@ -26,10 +26,10 @@ def test_t17_admin_cannot_touch_the_key_or_grant_custodian(
     admin = clients["admin"]
     calls = [
         admin.get("/api/key/fingerprint"),
-        admin.post("/api/key/backup", json={"totp_code": station.code("admin1")}),
-        admin.post("/api/key/rotate", json={"totp_code": station.code("admin1"), "confirm": "ROTATE"}),
+        admin.post("/api/key/backup", json={"password": GOOD}),
+        admin.post("/api/key/rotate", json={"password": GOOD, "confirm": "ROTATE"}),
         admin.post(f"/api/users/{station.ids['reviewer1']}/custodian",
-                   json={"totp_code": station.code("admin1"), "attest_centre_staff": True}),
+                   json={"password": GOOD, "attest_centre_staff": True}),
         admin.post("/api/users", json={"username": "cust2", "roles": ["custodian"]}),
         admin.put(f"/api/users/{station.ids['reviewer1']}/roles", json={"roles": ["reviewer", "custodian"]}),
     ]  # fmt: skip
@@ -45,12 +45,12 @@ def test_custodian_key_routes(staffed: tuple[Station, dict[str, TestClient]]) ->
     cust = clients["custodian"]
     fp = cust.get("/api/key/fingerprint").json()["key_fingerprint"]
     assert len(fp) == 16 and _events(station, "key.viewed")
-    assert cust.post("/api/key/backup", json={"totp_code": "000000"}).json()["error"] == "totp_invalid"
-    r = cust.post("/api/key/backup", json={"totp_code": station.code("custodian1")})
+    assert cust.post("/api/key/backup", json={"password": BAD_GUESS}).json()["error"] == "reauth_invalid"
+    r = cust.post("/api/key/backup", json={"password": GOOD})
     assert r.status_code == 501 and _events(station, "key.backup_requested")
-    r = cust.post("/api/key/rotate", json={"totp_code": station.code("custodian1"), "confirm": "rotate"})
+    r = cust.post("/api/key/rotate", json={"password": GOOD, "confirm": "rotate"})
     assert r.status_code == 400
-    r = cust.post("/api/key/rotate", json={"totp_code": station.code("custodian1"), "confirm": "ROTATE"})
+    r = cust.post("/api/key/rotate", json={"password": GOOD, "confirm": "ROTATE"})
     assert r.status_code == 501 and _events(station, "key.rotate_requested")
     assert fp not in r.text and not _events(station, "key.rotated")
 
@@ -61,24 +61,20 @@ def test_custodian_grant_rules(staffed: tuple[Station, dict[str, TestClient]]) -
     consultant = admin.post("/api/users", json={"username": "consult1", "roles": ["reviewer"],
                                                 "is_consultant": True}).json()["user"]["id"]  # fmt: skip
     target = station.ids["reviewer1"]
-    grant = {"totp_code": "000000", "attest_centre_staff": True}
-    assert cust.post(f"/api/users/{target}/custodian", json=grant).json()["error"] == "totp_invalid"
-    no_attest = {"totp_code": station.code("custodian1"), "attest_centre_staff": False}
+    wrong = {"password": BAD_GUESS, "attest_centre_staff": True}
+    assert cust.post(f"/api/users/{target}/custodian", json=wrong).json()["error"] == "reauth_invalid"
+    no_attest = {"password": GOOD, "attest_centre_staff": False}
     assert cust.post(f"/api/users/{target}/custodian", json=no_attest).json()["error"] == "attestation"
-    grant["totp_code"] = station.code("custodian1")
+    grant = {"password": GOOD, "attest_centre_staff": True}
     assert cust.post(f"/api/users/{consultant}/custodian", json=grant).json()["error"] == "consultant"
-    grant["totp_code"] = station.code("custodian1")
     assert cust.post(f"/api/users/{station.ids['admin1']}/custodian", json=grant).status_code == 409
-    grant["totp_code"] = station.code("custodian1")
     r = cust.post(f"/api/users/{target}/custodian", json=grant)
     assert r.status_code == 200 and r.json()["roles"] == ["custodian", "reviewer"]
     [(by, who, details)] = _events(station, "custodian.granted")
     assert by == station.ids["custodian1"] and who == target and '"attested_centre_staff":true' in details
-    # the new Custodian has to enrol TOTP at the next login before acting
-    assert clients["reviewer"].get("/api/auth/me").status_code == 401  # sessions ended
-    c = station.new_client()
-    r = c.post("/api/auth/login", json={"username": "reviewer1", "password": station.passwords["reviewer1"]})
-    assert r.json()["stage"] == "totp_enrol"
+    # the new role applies from the next login (sessions ended)
+    assert clients["reviewer"].get("/api/auth/me").status_code == 401
+    assert "key.manage" in station.login("reviewer1").get("/api/auth/me").json()["permissions"]
 
 
 def test_user_lifecycle_and_last_admin_custodian(staffed: tuple[Station, dict[str, TestClient]]) -> None:
@@ -151,6 +147,20 @@ def test_admin_reset_cli(station: Station, capsys: object) -> None:
     out = capsys.readouterr().out  # type: ignore[attr-defined]
     temp = out.strip().splitlines()[1]
     r = c.post("/api/auth/login", json={"username": "admin1", "password": temp})
-    assert r.status_code == 200 and r.json()["stage"] == "mfa_pending"  # TOTP kept unless --reset-totp
-    [(by, _, details)] = _events(station, "user.admin_reset")
-    assert by == "cli" and '"reset_totp":false' in details
+    assert r.status_code == 200 and r.json()["stage"] == "password_change"
+    [(by, _, _)] = _events(station, "user.admin_reset")
+    assert by == "cli"
+
+
+def test_wrong_reauth_counts_towards_the_lockout(staffed: tuple[Station, dict[str, TestClient]]) -> None:
+    station, clients = staffed
+    cust = clients["custodian"]
+    for _ in range(4):
+        assert cust.post("/api/key/backup", json={"password": BAD_GUESS}).status_code == 403
+    assert cust.post("/api/key/backup", json={"password": BAD_GUESS}).status_code == 423
+    assert cust.get("/api/auth/me").status_code == 401  # locked: the session ends
+    c = station.new_client()
+    good = {"username": "custodian1", "password": station.passwords["custodian1"]}
+    assert c.post("/api/auth/login", json=good).status_code == 423
+    clients["admin"].post(f"/api/users/{station.ids['custodian1']}/unlock")
+    assert c.post("/api/auth/login", json=good).status_code == 200

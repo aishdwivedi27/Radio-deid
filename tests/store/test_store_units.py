@@ -20,7 +20,7 @@ from app.store.output.tail import read_tail, truncate_fragment
 TABLES = {
     "records", "record_versions", "images", "source_files", "append_log", "exclusions", "ethics_approval",
     "list_versions", "patient_flags", "withdrawals", "licensees", "releases", "release_records", "reid_tests",
-    "breaches", "audit_events", "alembic_version", "users", "user_roles", "sessions", "backup_codes",
+    "breaches", "audit_events", "alembic_version", "users", "user_roles", "sessions",
     "settings", "jobs",
 }  # fmt: skip
 

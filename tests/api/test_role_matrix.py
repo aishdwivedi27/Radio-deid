@@ -36,11 +36,10 @@ SPEC_TABLE: dict[str, set[str]] = {
 
 PUBLIC = {
     ("GET", "/api/health"), ("GET", "/api/status"), ("GET", "/api/setup"), ("POST", "/api/setup/key"),
-    ("POST", "/api/setup/{role}"), ("POST", "/api/setup/{role}/totp"), ("POST", "/api/auth/login"),
+    ("POST", "/api/setup/{role}"), ("POST", "/api/auth/login"),
 }  # fmt: skip
-SESSION_ONLY = {  # sign-in steps: a session in the right stage, no permission
-    ("POST", "/api/auth/totp"), ("POST", "/api/auth/password"), ("POST", "/api/auth/totp/enrol"),
-    ("POST", "/api/auth/totp/confirm"), ("POST", "/api/auth/logout"), ("GET", "/api/auth/me"),
+SESSION_ONLY = {  # any signed-in session, no permission
+    ("POST", "/api/auth/password"), ("POST", "/api/auth/logout"), ("GET", "/api/auth/me"),
 }  # fmt: skip
 
 # One call per protected route. Bodies are chosen so an allowed role gets a non-"forbidden" answer
@@ -51,6 +50,7 @@ CALLS: list[tuple[str, str, dict[str, Any]]] = [
     ("PUT", "/api/users/u_missing/roles", {"json": {}}),
     ("POST", "/api/users/u_missing/disable", {}),
     ("POST", "/api/users/u_missing/enable", {}),
+    ("POST", "/api/users/u_missing/unlock", {}),
     ("POST", "/api/users/u_missing/reset-password", {}),
     ("POST", "/api/users/u_missing/custodian", {"json": {}}),
     ("GET", "/api/settings", {}),
