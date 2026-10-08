@@ -16,7 +16,7 @@ from tests.conftest import PHI
 
 def test_api_and_logs_free_of_phi(caplog: pytest.LogCaptureFixture, tmp_path: Path) -> None:
     caplog.set_level(logging.DEBUG)
-    client = TestClient(create_app(web_dist=tmp_path))
+    client = TestClient(create_app(web_dist=tmp_path), base_url="http://127.0.0.1:8765")
     blob = "".join(client.get(url).text for url in ("/", "/api/health", "/api/missing"))
     blob += caplog.text
     leaks = [p for p in PHI if p.lower() in blob.lower()]

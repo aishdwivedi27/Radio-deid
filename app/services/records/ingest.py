@@ -74,6 +74,9 @@ def _new_files(s: Session, record_id: str, files: list[_File], use_pending: bool
     return [f for f in files if f.sha not in fin_sha | pend_sha and f.sop_key not in fin_sop | pend_sop]
 
 
+PRE_APPROVAL_REASON = "PRE_APPROVAL_REAL_DATA"
+
+
 def _exclusion(ctx: ServiceContext, rec: PendingRecord, group: StudyGroup, key: bytes, job_id: str) -> None:
     screen = rec.screen
     assert screen is not None
@@ -99,6 +102,10 @@ def _exclusion(ctx: ServiceContext, rec: PendingRecord, group: StudyGroup, key: 
             rec.record_id,
             {"reason": screen.reason, "rule": screen.rule_id},
         )
+        if screen.reason == PRE_APPROVAL_REASON:  # SPEC §4.1: refusal audited, file names hashed (T21)
+            hashes = sorted(ps.hmac_hex(key, "source", f.path.name)[:16] for f in group.files)
+            details = {"files": len(hashes), "file_name_hashes": hashes, "job_id": job_id}
+            audit.append_event(s, "preapproval.refused_file", "record", rec.record_id, details)
 
 
 def _register(ctx: ServiceContext, rec: PendingRecord, new: list[_File], job_id: str, rerun: bool) -> int:

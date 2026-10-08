@@ -33,7 +33,9 @@ def test_startup_reconciles_a_crashed_finalise(
     monkeypatch.undo()
     ctx.db.dispose()
     settings = build_settings({"data_root": str(tmp_path)})
-    with TestClient(create_app(web_dist=tmp_path / "no-web", settings=settings)) as client:
+    with TestClient(
+        create_app(web_dist=tmp_path / "no-web", settings=settings), base_url="http://127.0.0.1:8765"
+    ) as client:
         assert client.get("/api/health").json() == {"status": "ok"}
         client.app.state.services.db.dispose()  # type: ignore[attr-defined]
     out = tmp_path / "output"

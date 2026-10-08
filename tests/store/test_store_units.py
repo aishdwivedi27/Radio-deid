@@ -20,7 +20,8 @@ from app.store.output.tail import read_tail, truncate_fragment
 TABLES = {
     "records", "record_versions", "images", "source_files", "append_log", "exclusions", "ethics_approval",
     "list_versions", "patient_flags", "withdrawals", "licensees", "releases", "release_records", "reid_tests",
-    "breaches", "audit_events", "alembic_version",
+    "breaches", "audit_events", "alembic_version", "users", "user_roles", "sessions", "backup_codes",
+    "settings", "jobs",
 }  # fmt: skip
 
 
@@ -103,6 +104,11 @@ def test_audit_chain(tmp_path: Path) -> None:
         first = s.query(AuditEvent).order_by(AuditEvent.id).first()
         assert first is not None and first.prev_hash == audit.GENESIS
         first.details_json = '{"version":2}'
+        with pytest.raises(Exception, match="append-only"):  # the trigger refuses edits (migration 0002)
+            s.flush()
+    with db.engine.begin() as conn:
+        conn.exec_driver_sql("DROP TRIGGER audit_events_no_update")
+        conn.exec_driver_sql("UPDATE audit_events SET details_json='{\"version\":2}' WHERE id=1")
     with db.session() as s:
-        assert not audit.chain_ok(s)  # any edit breaks the chain
+        assert audit.verify_chain(s) == audit.ChainResult(False, 0, 1)  # any edit breaks the chain
     db.dispose()

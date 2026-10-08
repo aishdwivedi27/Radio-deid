@@ -28,6 +28,10 @@ class Paths:
         return self.app_data_dir / "work" / "pending"
 
     @property
+    def key_path(self) -> Path:
+        return self.app_data_dir / "secret.key"
+
+    @property
     def withdrawn_dir(self) -> Path:
         return self.app_data_dir / "withdrawn"
 

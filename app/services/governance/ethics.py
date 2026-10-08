@@ -1,7 +1,9 @@
 """Ethics configuration and the cohort cap (SPEC §12.1). TR-COH-01..04.
 
-Phase 2 provides the store side: record an approval, build the eligibility ``ScreenContext`` from the DB and
-check the cap at finalisation. The Custodian-only, TOTP-confirmed screen arrives with auth (Phase 3+).
+Record an approval (Custodian only, confirmed with TOTP: ``configure_approval``), build the eligibility
+``ScreenContext`` from the DB and check the cap at finalisation. Until an approval is active the app is in
+pre-approval mode (SPEC §4.1, TR-COH-05): releases, re-identification samples and catalogue exports call
+``assert_not_preapproval`` and are refused; no role can override it.
 """
 
 from __future__ import annotations
@@ -12,14 +14,18 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
+from app.auth.errors import Actor, AppError, bad_request
 from app.deid.record.finalrow import PRE_APPROVAL_COHORT
 from app.deid.types import DeidError, ScreenContext
+from app.services.auth import access
 from app.services.context import ServiceContext, now_iso
 from app.store import audit
 from app.store.repos import governance as gov
 from app.store.repos import records as recs
 
 CAP_MESSAGE = "Cohort cap reached — EC amendment required."
+PREAPPROVAL_BANNER = "Pre-approval mode — synthetic data only."
+PREAPPROVAL_REFUSAL = "Releases and exports are disabled until the ethics approval is recorded."
 
 
 @dataclass(frozen=True)
@@ -91,3 +97,24 @@ def cap_hold(s: Session, new_study: bool, new_images: int) -> str | None:
     studies, images = recs.usage(s)
     adding, used = (int(new_study), studies) if approval.cap_unit == "studies" else (new_images, images)
     return CAP_MESSAGE if adding and used + adding > approval.cohort_cap else None
+
+
+def configure_approval(ctx: ServiceContext, actor: Actor, a: ApprovalInput, totp_code: str | None) -> int:
+    """The Custodian records an approval with a fresh TOTP code; this also ends pre-approval mode."""
+    access.check(ctx, actor, "ethics.configure", "ethics.approval")
+    access.verify_step_up(ctx, actor, totp_code, "ethics.configure", "ethics.approval")
+    try:
+        return record_approval(ctx, a, actor.user_id)
+    except DeidError as exc:
+        raise bad_request(str(exc), "ethics") from None
+
+
+def is_preapproval(ctx: ServiceContext) -> bool:
+    with ctx.db.session() as s:
+        return gov.active_approval(s) is None
+
+
+def assert_not_preapproval(s: Session) -> None:
+    """Called by every release, re-identification sample and catalogue export (TR-COH-05)."""
+    if gov.active_approval(s) is None:
+        raise AppError(409, "preapproval", PREAPPROVAL_REFUSAL)
