@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 DateMode = Literal["shift", "year_only", "remove"]
-Status = Literal["awaiting_review", "auto_qa_failed", "excluded"]
+Status = Literal["awaiting_review", "auto_qa_failed", "excluded", "unchanged"]
 
 
 class DeidError(ValueError):

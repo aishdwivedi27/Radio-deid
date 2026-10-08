@@ -2,7 +2,7 @@
 
 Rows are built only from the de-identified output files, never from the original headers. Reviewer fields
 (``qa.decision``, ``qa.reviewer_id``, ``qa.decided_at``, ``finalised_at``, ``finding_category``,
-``cohort_ref``) are added at finalisation (Phase 3).
+``cohort_ref``) are added at finalisation (``finalrow.py``).
 """
 
 from __future__ import annotations
@@ -19,7 +19,6 @@ from app.deid.dicom.dates import age_band, iso_date
 from app.deid.record.canonical import sha256_file
 from app.deid.types import ExtractedReport, ScreenResult
 
-RECORD_VERSION = 1
 SEXES = {"M", "F", "O"}
 
 
@@ -39,11 +38,13 @@ def _spacing(ds: Dataset) -> list[float] | None:
     return None
 
 
-def image_row(path: Path, ds: Dataset, rid: str, pcode: str, ocr_regions: int) -> dict[str, Any]:
+def image_row(
+    path: Path, ds: Dataset, rid: str, pcode: str, ocr_regions: int, version: int = 1
+) -> dict[str, Any]:
     return {
         "image_id": path.stem,
         "record_id": rid,
-        "record_version": RECORD_VERSION,
+        "record_version": version,
         "patient_code": pcode,
         "file": f"records/{rid}/{path.name}",
         "sha256": sha256_file(path),
@@ -108,6 +109,7 @@ class RecordInputs:
     pipeline_version: str
     key_fingerprint: str
     processed_at: str = ""
+    version: int = 1
 
 
 def now_iso() -> str:
@@ -120,7 +122,7 @@ def record_row(inp: RecordInputs, auto: dict[str, str], consistency: dict[str, s
     age = str(first.get("PatientAge", "") or "")
     return {
         "record_id": inp.rid,
-        "record_version": RECORD_VERSION,
+        "record_version": inp.version,
         "patient_code": inp.pcode,
         "modalities": sorted({r["modality"] for r in rows if r["modality"]}),
         "body_part": str(first.get("BodyPartExamined", "") or ""),

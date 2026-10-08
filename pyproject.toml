@@ -8,6 +8,8 @@ dependencies = [
     "uvicorn>=0.30",
     "sqlalchemy>=2.0",
     "alembic>=1.13",
+    "jsonschema>=4.23",  # every appended JSONL line is validated (SPEC §5.2)
+    "filelock>=3.12",  # cross-process output lock; msvcrt on Windows, fcntl on macOS
     # de-identification core (app/deid)
     "pydicom>=3.0",
     "python-gdcm>=3.0.24",  # BSD; decodes JPEG Lossless / JPEG-LS / JPEG 2000 so compressed images can be OCR-masked
@@ -32,7 +34,6 @@ dev = [
     "detect-secrets>=1.5",
     "pre-commit>=3.8",
     "uv>=0.4",
-    "jsonschema>=4.23",
     # test fixtures (tests/fixtures/make_sample_data.py)
     "reportlab>=4.2",
 ]
@@ -74,5 +75,5 @@ exclude = ["^reference/", "^tests/fixtures/"]
 
 [[tool.mypy.overrides]]
 # imaging/NLP libraries without type information
-module = ["rapidocr_onnxruntime.*", "presidio_analyzer.*", "spacy.*", "docx.*", "pypdfium2.*"]
+module = ["rapidocr_onnxruntime.*", "presidio_analyzer.*", "spacy.*", "docx.*", "pypdfium2.*", "jsonschema.*"]
 ignore_missing_imports = true

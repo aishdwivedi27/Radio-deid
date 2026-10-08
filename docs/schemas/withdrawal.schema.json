@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "withdrawal.schema.json",
+  "title": "Withdrawn record (one line per record in withdrawals.jsonl; SPEC §5.2, §13.1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["record_id", "patient_code", "reason", "list_version", "withdrawn_at"],
+  "properties": {
+    "record_id": {"type": "string", "pattern": "^S[0-9A-F]{12}$"},
+    "patient_code": {"type": "string", "pattern": "^P[0-9A-F]{12}$"},
+    "reason": {"enum": ["OPT_OUT", "STAFF_VIP"]},
+    "list_version": {"type": "integer", "minimum": 1},
+    "withdrawn_at": {"type": "string", "format": "date-time"}
+  }
+}

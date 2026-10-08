@@ -30,6 +30,7 @@ from app.deid.qa import a_checks, c_checks
 from app.deid.record.canonical import write_record_json
 from app.deid.record.preview import write_preview
 from app.deid.record.rows import RecordInputs, ReportPart, image_row, now_iso, record_row
+from app.deid.record.versioning import PriorVersion, link_prior_images, prior_report
 from app.deid.report import ner
 from app.deid.report.header import build_report
 from app.deid.report.read import read_report
@@ -88,9 +89,12 @@ def _process_images(
     study_mods: frozenset[str],
     out_dir: Path,
     ids_out: tuple[str, str],
+    prior: PriorVersion | None = None,
 ) -> tuple[_Images, ps.ImageIdAllocator]:
     rid, pcode = ids_out
     imgs, alloc = _Images(), ps.ImageIdAllocator(rid)
+    alloc.used |= set(prior.image_ids) if prior else set()  # a new SOP never takes a prior image's ID
+    version = prior.version if prior else 1
     use_ocr = s.ocr_enabled and ocr_engine.available()
     rx = identifier_regex(ids.values)
     method = method_text(PIPELINE_VERSION, allowlist().version, s.date_mode)
@@ -123,7 +127,7 @@ def _process_images(
         out = build_dataset(ds, policy_for(triage.modality(ds)), ctx)
         target = out_dir / f"{image_id}.dcm"
         out.save_as(target, enforce_file_format=True)
-        imgs.rows.append(image_row(target, out, rid, pcode, regions))
+        imgs.rows.append(image_row(target, out, rid, pcode, regions, version))
         imgs.remaining[target.name] = remaining
         imgs.interior += interior
         imgs.first = imgs.first or out
@@ -156,6 +160,27 @@ def _write_report(
     return ReportPart(present=True, file=path, source=src, redactions=counts)
 
 
+def _report_part(
+    tmp: Path,
+    rec: PendingRecord,
+    image_ids: list[str],
+    src: ExtractedReport | None,
+    ids: Identifiers,
+    s: DeidSettings,
+    prior: PriorVersion | None,
+) -> ReportPart:
+    rid, pcode = rec.record_id, rec.patient_code
+    if src:
+        return _write_report(tmp, rid, pcode, image_ids, src, ids, s.ner_enabled and ner.available())
+    carried = prior_report(prior) if prior else None
+    if carried is None:
+        return ReportPart(False)
+    body, counts = carried  # already redacted; only the header block is rebuilt (C4)
+    path = tmp / f"{rid}_report.txt"
+    path.write_text(build_report(rid, pcode, image_ids, body.text), encoding="utf-8", newline="\n")
+    return ReportPart(present=True, file=path, source=body, redactions=counts)
+
+
 def _fresh(path: Path) -> Path:
     if path.exists():
         shutil.rmtree(path)
@@ -177,8 +202,12 @@ def process_study(
     settings: DeidSettings,
     pending_root: Path,
     finalised: dict[str, str] | None = None,
+    prior: PriorVersion | None = None,
 ) -> PendingRecord:
-    """Screen and de-identify one study into ``pending_root/<record_id>/``. See the module docstring."""
+    """Screen and de-identify one study into ``pending_root/<record_id>/``. See the module docstring.
+
+    With ``prior`` (a re-sent study, ``record/versioning.py``) only ``group``'s files are de-identified and
+    the prior images are carried into the folder; status ``unchanged`` means nothing new was releasable."""
     headers = _headers(group)
     rid, pcode = ps.record_id(key, group.study_uid), ps.patient_code(key, group.patient_id)
     rec = PendingRecord(
@@ -194,7 +223,7 @@ def process_study(
         return rec
     tmp = _fresh(pending_root / f".tmp-{rid}")
     try:
-        _build(rec, group, headers, src, key, settings, tmp)
+        _build(rec, group, headers, src, key, settings, tmp, prior)
         if rec.record_row is None:
             shutil.rmtree(tmp)
             return rec
@@ -214,25 +243,28 @@ def _build(
     key: bytes,
     s: DeidSettings,
     tmp: Path,
+    prior: PriorVersion | None = None,
 ) -> None:
     screen_result = rec.screen
     assert screen_result is not None
     ids = collect(headers)
     mods = frozenset(str(h.get("Modality", "")).upper() for h in headers)
-    imgs, alloc = _process_images(group, key, s, ids, mods, tmp, (rec.record_id, rec.patient_code))
-    rec.excluded_images, rec.notes["ID_TRUNCATED"] = imgs.excluded, alloc.truncated
+    ids_out = (rec.record_id, rec.patient_code)
+    imgs, alloc = _process_images(group, key, s, ids, mods, tmp, ids_out, prior)
+    rec.notes["ID_TRUNCATED"] = alloc.truncated
+    rec.excluded_images = imgs.excluded + (prior.excluded if prior else Counter())
     if not imgs.rows or imgs.first is None:
-        rec.status = "auto_qa_failed"
-        rec.findings = [Finding("NO_IMAGES", "no releasable image in this study")]
+        rec.status = "unchanged" if prior else "auto_qa_failed"
+        rec.findings = [] if prior else [Finding("NO_IMAGES", "no releasable image in this study")]
         return
+    new_ids = [str(r["image_id"]) for r in imgs.rows]
+    if prior:
+        link_prior_images(prior, tmp)
+        imgs.rows = [*prior.image_rows, *imgs.rows]
+        imgs.remaining.update({f"{i}.dcm": 0 for i in prior.image_ids})  # passed A7 when first processed
     image_ids = [str(r["image_id"]) for r in imgs.rows]
-    use_ner = s.ner_enabled and ner.available()
-    part = (
-        _write_report(tmp, rec.record_id, rec.patient_code, image_ids, src, ids, use_ner)
-        if src
-        else ReportPart(False)
-    )
-    write_preview(tmp / f"{image_ids[len(image_ids) // 2]}.dcm", tmp / f"{rec.record_id}_preview.png")
+    part = _report_part(tmp, rec, image_ids, src, ids, s, prior)
+    write_preview(tmp / f"{new_ids[len(new_ids) // 2]}.dcm", tmp / f"{rec.record_id}_preview.png")
     rec.findings = a_checks.check_deid(tmp, ids, imgs.remaining)
     not_applicable = ({"A4"} if not part.present else set()) | ({"A7"} if not imgs.ocr_used else set())
     inputs = RecordInputs(
@@ -241,13 +273,14 @@ def _build(
         imgs.first,
         imgs.rows,
         part,
-        imgs.excluded,
+        rec.excluded_images,
         screen_result,
         s.date_mode,
         s.job_id,
         PIPELINE_VERSION,
         key_fingerprint(key),
         now_iso(),
+        prior.version if prior else 1,
     )
     rec.image_rows = list(imgs.rows)
     rec.redactions = dict(part.redactions or {})

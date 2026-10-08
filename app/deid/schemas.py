@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import cache, lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -101,3 +101,18 @@ def load_finding_categories(schema_dir: Path = SCHEMA_DIR) -> dict[str, Any]:
 @lru_cache(maxsize=1)
 def allowlist() -> Allowlist:
     return load_allowlist()
+
+
+ROW_SCHEMAS = {
+    "record": "record.schema.json",
+    "image": "image.schema.json",
+    "withdrawal": "withdrawal.schema.json",
+}
+
+
+@cache
+def row_schema(kind: str) -> dict[str, Any]:
+    """JSON schema for one appended line: ``record``, ``image`` or ``withdrawal`` (SPEC §5.2)."""
+    if kind not in ROW_SCHEMAS:
+        raise SchemaError(f"unknown row kind {kind}")
+    return _read(ROW_SCHEMAS[kind], SCHEMA_DIR)
