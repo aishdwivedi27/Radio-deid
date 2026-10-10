@@ -11,12 +11,10 @@ from app.config import ConfigError, load_settings
 def _serve() -> int:
     import uvicorn
 
-    from app.api.main import create_app
+    from app.server import build_app
 
     settings = load_settings()
-    uvicorn.run(
-        create_app(settings=settings), host=settings.bind_address, port=settings.port, log_level="info"
-    )
+    uvicorn.run(build_app(settings), host=settings.bind_address, port=settings.port, log_level="info")
     return 0
 
 

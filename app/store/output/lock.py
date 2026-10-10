@@ -17,3 +17,10 @@ def output_lock(app_data_dir: Path) -> FileLock:
     locks = app_data_dir / "locks"
     locks.mkdir(parents=True, exist_ok=True)
     return FileLock(str(locks / "output.lock"), timeout=LOCK_TIMEOUT_S)
+
+
+def worker_lock(app_data_dir: Path) -> FileLock:
+    """Held by the job worker for as long as it runs, so a second app instance never runs jobs (Phase 4)."""
+    locks = app_data_dir / "locks"
+    locks.mkdir(parents=True, exist_ok=True)
+    return FileLock(str(locks / "worker.lock"), timeout=0)

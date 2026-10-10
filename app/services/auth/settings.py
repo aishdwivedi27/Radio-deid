@@ -4,7 +4,8 @@ TR-ROLE-04, TR-SEC-03.
 Admin only, each change audited (``settings.changed``, ``sod.toggled``). Input roots set here replace
 ``input_roots`` from settings.toml; each must be an existing absolute folder outside app_data and output.
 The values are folder paths chosen by staff (not patient data); the audit event records only the count and
-a hash of each path.
+a hash of each path. The volume identity of each root is stored with it, so a removable drive can be found
+again under another letter or mount path (SPEC §6.5, ``services/jobs/inputs.py``).
 """
 
 from __future__ import annotations
@@ -18,10 +19,11 @@ from sqlalchemy.orm import Session
 from app.auth.errors import Actor, bad_request
 from app.services.auth import access
 from app.services.context import ServiceContext, now_iso
+from app.services.jobs import inputs
 from app.store import audit
 from app.store.repos import settings as cfg
 
-INPUT_ROOTS = "input_roots"
+INPUT_ROOTS = inputs.INPUT_ROOTS
 SOD = "sod_enabled"
 
 
@@ -66,6 +68,7 @@ def set_input_roots(ctx: ServiceContext, actor: Actor, roots: list[str]) -> list
         hashes = [hashlib.sha256(p.encode("utf-8")).hexdigest()[:16] for p in clean]
         details = {"key": INPUT_ROOTS, "count": len(clean), "path_hashes": hashes}
         audit.append_event(s, "settings.changed", "setting", INPUT_ROOTS, details, actor.user_id)
+    inputs.record_identities(ctx, [Path(p) for p in clean], actor.user_id)
     return clean
 
 

@@ -38,6 +38,7 @@ class StudyGroup:
     accession: str = field(repr=False)
     files: list[SourceFile] = field(default_factory=list, repr=False)
     folders: set[Path] = field(default_factory=set, repr=False)
+    modalities: set[str] = field(default_factory=set)  # not identifying (exclusions.csv ``modality``)
 
     @property
     def n_files(self) -> int:
@@ -49,6 +50,7 @@ class InputIndex:
     studies: list[StudyGroup]
     reports: list[Path] = field(repr=False)
     skipped: Counter[str] = field(default_factory=Counter)
+    skipped_files: list[tuple[Path, str]] = field(default_factory=list, repr=False)  # (path, kind)
 
 
 @dataclass(frozen=True)

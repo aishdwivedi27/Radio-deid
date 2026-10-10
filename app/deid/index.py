@@ -1,12 +1,14 @@
 """Find DICOM studies and reports in an input folder (SPEC §6.1 last paragraph, §6.5). TR-ING-03.
 
 DICOM is recognised by content (``DICM`` at byte 128), not by extension; ``DICOMDIR`` is skipped. Only the
-header is read. The input folder is never modified.
+header is read. The input folder is never modified. A caller that has already walked the folder (the job
+service, which refuses symlink escapes) passes the vetted file list as ``files``.
 """
 
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Iterable
 from pathlib import Path
 
 import pydicom
@@ -23,6 +25,7 @@ _HEADER_KEYWORDS = [
     "AccessionNumber",
     "SeriesNumber",
     "InstanceNumber",
+    "Modality",
 ]
 
 
@@ -54,25 +57,30 @@ def _classify(path: Path) -> str:
     return "non_dicom"
 
 
-def index_input(input_dir: Path) -> InputIndex:
+def index_input(input_dir: Path, files: Iterable[Path] | None = None) -> InputIndex:
     studies: dict[str, StudyGroup] = {}
     reports: list[Path] = []
     skipped: Counter[str] = Counter()
-    for path in sorted(p for p in input_dir.rglob("*") if p.is_file()):
+    skipped_files: list[tuple[Path, str]] = []
+    found = files if files is not None else (p for p in input_dir.rglob("*") if p.is_file())
+    for path in sorted(found):
         kind = _classify(path)
         if kind == "report":
             reports.append(path)
             continue
         if kind != "dicom":
             skipped[kind] += 1
+            skipped_files.append((path, kind))
             continue
         try:
             ds = pydicom.dcmread(path, stop_before_pixels=True, specific_tags=_HEADER_KEYWORDS)
         except (InvalidDicomError, OSError, ValueError, EOFError):
             skipped["unreadable"] += 1
+            skipped_files.append((path, "unreadable"))
             continue
         if str(ds.file_meta.get("MediaStorageSOPClassUID", "")) == DICOMDIR_SOP_CLASS:
             skipped["dicomdir"] += 1
+            skipped_files.append((path, "dicomdir"))
             continue
         uid = str(ds.get("StudyInstanceUID", "") or "") or f"folder:{path.parent}"
         group = studies.setdefault(
@@ -92,4 +100,5 @@ def index_input(input_dir: Path) -> InputIndex:
             )
         )
         group.folders.add(path.parent)
-    return InputIndex(studies=list(studies.values()), reports=reports, skipped=skipped)
+        group.modalities.add(str(ds.get("Modality", "") or "").upper())
+    return InputIndex(list(studies.values()), reports, skipped, skipped_files)

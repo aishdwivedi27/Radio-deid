@@ -1,6 +1,7 @@
 """Roles and permissions: the only mapping (SPEC §2). TR-ROLE-01..04.
 
-One permission per row of the SPEC §2 table, plus ``custodian.grant`` from the Custodian rules under it.
+One permission per row of the SPEC §2 table, plus ``custodian.grant`` from the Custodian rules under it and
+``exclusions.view`` (skip list with plain source paths, skip spot-check, reconciliation; SPEC §6.4).
 A user holds a set of roles; Admin and Custodian are never held by the same account (D-025).
 """
 
@@ -43,6 +44,8 @@ PERMISSIONS: dict[str, frozenset[str]] = {
     "audit.view": frozenset({CUSTODIAN, AUDITOR}),
     # Custodian rules: granting Custodian needs an existing Custodian (password re-entry, CR-01)
     "custodian.grant": frozenset({CUSTODIAN}),
+    # SPEC §6.4: exclusions.csv (plain source paths), skip spot-check, reconciliation.csv download
+    "exclusions.view": frozenset({CUSTODIAN, REVIEWER}),
 }
 
 

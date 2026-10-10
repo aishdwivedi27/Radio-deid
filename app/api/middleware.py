@@ -2,7 +2,8 @@
 
 - Host allowlist (127.0.0.1 / localhost on the configured port): blocks DNS-rebinding pages.
 - Origin check on every state-changing request, including login and setup (which have no session yet), and
-  a JSON (or, for list imports, CSV) content type, so a cross-site HTML form cannot reach the API.
+  a JSON (or, for list imports, CSV; for uploads, multipart) content type. A cross-site form cannot reach
+  the upload either: it has no session CSRF header.
 - First-run gate: until setup is complete only health, status and setup routes answer (503 otherwise).
 - Error bodies are fixed codes and messages. Validation errors list field locations only and never echo
   what was sent (it could be a password or a patient ID).
@@ -22,6 +23,7 @@ from app.auth.errors import AppError
 from app.services.auth.setup import completed
 
 OPEN_BEFORE_SETUP = ("/api/health", "/api/status", "/api/setup")
+UPLOAD_PATH = "/api/jobs/upload"
 _HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
@@ -36,11 +38,15 @@ def _error(status: int, code: str, message: str) -> JSONResponse:
 
 def _content_type_ok(request: Request, path: str) -> bool:
     """An empty body is fine whatever its declared type (some clients send a form type with no body);
-    a body must be JSON, or CSV for a list import."""
+    a body must be JSON, CSV for a list import, or multipart for an upload job."""
     if request.headers.get("content-length", "0") == "0" and "transfer-encoding" not in request.headers:
         return True
     ctype = request.headers.get("content-type", "").split(";")[0].strip().lower()
-    return ctype == "application/json" or (ctype == "text/csv" and path.startswith("/api/lists/"))
+    return (
+        ctype == "application/json"
+        or (ctype == "text/csv" and path.startswith("/api/lists/"))
+        or (ctype == "multipart/form-data" and path == UPLOAD_PATH)
+    )
 
 
 def install(app: FastAPI, port: int) -> None:
@@ -65,7 +71,9 @@ def install(app: FastAPI, port: int) -> None:
             return _error(403, "origin", "Cross-origin request refused.")
         path = request.url.path
         if request.method in UNSAFE and path.startswith("/api") and not _content_type_ok(request, path):
-            return _error(415, "content_type", "Send JSON (or text/csv for a list import).")
+            return _error(
+                415, "content_type", "Send JSON (text/csv for a list import, multipart for uploads)."
+            )
         if path.startswith("/api") and not path.startswith(OPEN_BEFORE_SETUP):
             ctx = getattr(request.app.state, "services", None)
             if ctx is not None and not completed(ctx):

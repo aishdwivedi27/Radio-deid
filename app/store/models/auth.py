@@ -2,7 +2,7 @@
 TR-SEC-01.
 
 Sessions store only sha256(token). Session times are epoch seconds (compared, never shown). Usernames are
-staff logins, never patient data. ``jobs`` holds who started a job (separation of duties); Phase 4 extends it.
+staff logins, never patient data. ``Job`` now lives in ``jobs.py`` (Phase 4) and is re-exported here.
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ from sqlalchemy import Boolean, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.store.models.base import Base
+from app.store.models.jobs import Job  # moved in Phase 4; re-exported
 
 
 class User(Base):
@@ -51,9 +52,4 @@ class Setting(Base):
     changed_at: Mapped[str] = mapped_column(String(32))
 
 
-class Job(Base):
-    __tablename__ = "jobs"
-    job_id: Mapped[str] = mapped_column(String(40), primary_key=True)
-    started_by: Mapped[str] = mapped_column(String(40), index=True)
-    status: Mapped[str] = mapped_column(String(16))
-    created_at: Mapped[str] = mapped_column(String(32))
+__all__ = ["AuthSession", "Job", "Setting", "User", "UserRole"]

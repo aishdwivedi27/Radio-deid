@@ -10,6 +10,7 @@ dependencies = [
     "alembic>=1.13",
     "jsonschema>=4.23",  # every appended JSONL line is validated (SPEC §5.2)
     "filelock>=3.12",  # cross-process output lock; msvcrt on Windows, fcntl on macOS
+    "python-multipart>=0.0.18",  # streaming upload parser (Phase 4): writes straight into app_data/staging
     # auth (SPEC §7)
     "argon2-cffi>=23.1",  # argon2id password hashes
     # de-identification core (app/deid)

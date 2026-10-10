@@ -66,7 +66,7 @@ def check(app_dir: Path) -> list[str]:
     for path in sorted(app_dir.rglob("*.py")):
         module = _module_name(app_dir, path)
         if len(module) < 2 or module[1] not in ALLOWED:
-            continue  # app/__init__, app/__main__, app/config: composition root
+            continue  # app/__init__, app/__main__, app/config, app/server: composition root
         layer = module[1]
         tree = ast.parse(path.read_text(encoding="utf-8"))
         rel = path.relative_to(app_dir.parent).as_posix()

@@ -83,6 +83,7 @@ class Exclusion(Base):
     """One excluded study (SPEC §6.4). Hashed and coded only: no names, IDs or paths."""
 
     __tablename__ = "exclusions"
+    __table_args__ = (Index("ux_exclusions_job_study", "job_id", "study_key", unique=True),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     job_id: Mapped[str] = mapped_column(String(40), index=True)
     study_key: Mapped[str] = mapped_column(String(64))

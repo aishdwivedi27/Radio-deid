@@ -82,6 +82,8 @@ def _exclusion(ctx: ServiceContext, rec: PendingRecord, group: StudyGroup, key: 
     assert screen is not None
     source = ";".join(sorted(p.as_posix() for p in group.folders))
     with ctx.db.transaction() as s:
+        if recs.exclusion_exists(s, job_id, rec.study_key):
+            return  # a resumed job meets a study it already excluded: one row per job and study
         s.add(
             Exclusion(
                 job_id=job_id,

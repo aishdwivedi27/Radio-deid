@@ -12,7 +12,7 @@ from typing import Any
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from app.store.models.records import Image, Record, RecordVersion
+from app.store.models.records import Exclusion, Image, Record, RecordVersion
 
 FINALISED = "finalised"
 PENDING = "pending"
@@ -120,3 +120,8 @@ def usage(s: Session) -> tuple[int, int]:
     studies = s.scalar(select(func.count()).select_from(Record).where(Record.finalised_version.is_not(None)))
     imgs = s.scalar(select(func.count()).select_from(Image).where(Image.state == FINALISED))
     return int(studies or 0), int(imgs or 0)
+
+
+def exclusion_exists(s: Session, job_id: str, study_key: str) -> bool:
+    q = select(Exclusion.id).where(Exclusion.job_id == job_id, Exclusion.study_key == study_key)
+    return s.scalars(q).first() is not None

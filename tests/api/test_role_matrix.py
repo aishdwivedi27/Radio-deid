@@ -32,6 +32,7 @@ SPEC_TABLE: dict[str, set[str]] = {
     "records.view": {ADM, CUS, OPS, REV, AUD},  # Records list, record detail, download JSON/CSV
     "audit.view": {CUS, AUD},  # Audit log view/export; EC annual report export
     "custodian.grant": {CUS},  # Custodian rules: only an existing Custodian (with TOTP) grants Custodian
+    "exclusions.view": {CUS, REV},  # SPEC §6.4: skip list with source paths, spot-check, reconciliation
 }
 
 PUBLIC = {
@@ -41,6 +42,8 @@ PUBLIC = {
 SESSION_ONLY = {  # any signed-in session, no permission
     ("POST", "/api/auth/password"), ("POST", "/api/auth/logout"), ("GET", "/api/auth/me"),
 }  # fmt: skip
+
+_JOB, _REC = "J20260101-000000-0000", "S000000000000"
 
 # One call per protected route. Bodies are chosen so an allowed role gets a non-"forbidden" answer
 # (200, 400, 404, 422 or 501) without changing anything that matters to the other calls.
@@ -64,6 +67,26 @@ CALLS: list[tuple[str, str, dict[str, Any]]] = [
     ("GET", "/api/audit", {}),
     ("GET", "/api/audit/export.csv", {}),
     ("GET", "/api/audit/verify", {}),
+    # Phase 4: jobs and pending records (missing IDs, so an allowed role gets 400/404)
+    ("POST", "/api/jobs/folder", {"json": {"path": ""}}),
+    (
+        "POST",
+        "/api/jobs/upload",
+        {"content": b"", "headers": {"Content-Type": "multipart/form-data; boundary=x"}},
+    ),
+    ("GET", "/api/jobs", {}),
+    ("GET", f"/api/jobs/{_JOB}", {}),
+    ("POST", f"/api/jobs/{_JOB}/cancel", {}),
+    ("GET", f"/api/jobs/{_JOB}/events", {}),
+    ("GET", f"/api/jobs/{_JOB}/folders", {}),
+    ("GET", f"/api/jobs/{_JOB}/reconciliation.csv", {}),
+    ("GET", f"/api/jobs/{_JOB}/exclusions", {}),
+    ("GET", f"/api/jobs/{_JOB}/exclusions.csv", {}),
+    ("POST", f"/api/jobs/{_JOB}/exclusions/{'0' * 64}/verify", {"json": {"result": "confirmed"}}),
+    ("GET", "/api/pending", {}),
+    ("GET", f"/api/pending/{_REC}", {}),
+    ("GET", f"/api/pending/{_REC}/preview.png", {}),
+    ("GET", f"/api/pending/{_REC}/image/{_REC}-0001-000001.png", {}),
 ]
 
 

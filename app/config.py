@@ -29,6 +29,9 @@ class Settings:
     input_roots: tuple[Path, ...] = field(default_factory=tuple)
     port: int = DEFAULT_PORT
     bind_address: str = LOOPBACK
+    upload_max_file_mb: int = 4096  # one uploaded file (Phase 4 upload jobs)
+    upload_max_total_gb: int = 200  # one upload job
+    upload_max_files: int = 200_000
 
     @property
     def inbox_dir(self) -> Path:
@@ -84,6 +87,16 @@ def _validate_port(port: Any) -> int:
     return value
 
 
+def _positive(raw: dict[str, Any], key: str, default: int) -> int:
+    try:
+        value = int(raw.get(key, default))
+    except (TypeError, ValueError) as exc:
+        raise ConfigError(f"{key} must be an integer") from exc
+    if value < 1:
+        raise ConfigError(f"{key} must be at least 1")
+    return value
+
+
 def build_settings(raw: dict[str, Any]) -> Settings:
     if "data_root" not in raw:
         raise ConfigError("data_root is required")
@@ -106,10 +119,23 @@ def build_settings(raw: dict[str, Any]) -> Settings:
         input_roots=input_roots,
         port=_validate_port(raw.get("port", DEFAULT_PORT)),
         bind_address=_validate_bind(str(raw.get("bind_address", LOOPBACK))),
+        upload_max_file_mb=_positive(raw, "upload_max_file_mb", 4096),
+        upload_max_total_gb=_positive(raw, "upload_max_total_gb", 200),
+        upload_max_files=_positive(raw, "upload_max_files", 200_000),
     )
 
 
-_ENV_KEYS = ("data_root", "output_root", "app_data_dir", "input_roots", "port", "bind_address")
+_ENV_KEYS = (
+    "data_root",
+    "output_root",
+    "app_data_dir",
+    "input_roots",
+    "port",
+    "bind_address",
+    "upload_max_file_mb",
+    "upload_max_total_gb",
+    "upload_max_files",
+)
 
 
 def load_settings(path: Path | None = None, env: dict[str, str] | None = None) -> Settings:

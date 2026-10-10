@@ -21,7 +21,7 @@ TABLES = {
     "records", "record_versions", "images", "source_files", "append_log", "exclusions", "ethics_approval",
     "list_versions", "patient_flags", "withdrawals", "licensees", "releases", "release_records", "reid_tests",
     "breaches", "audit_events", "alembic_version", "users", "user_roles", "sessions",
-    "settings", "jobs",
+    "settings", "jobs", "job_studies", "job_events",
 }  # fmt: skip
 
 
@@ -30,6 +30,8 @@ def test_migration_creates_every_table_and_is_rerunnable(tmp_path: Path) -> None
     assert set(inspect(db.engine).get_table_names()) == TABLES
     uniques = inspect(db.engine).get_unique_constraints("append_log")
     assert any(set(u["column_names"]) == {"file", "row_key"} for u in uniques)
+    indexes = inspect(db.engine).get_indexes("exclusions")  # Phase 4: one row per job and study
+    assert any(i["unique"] and set(i["column_names"]) == {"job_id", "study_key"} for i in indexes)
     db.dispose()
     init_db(tmp_path / "app.db").dispose()  # second start: nothing to do, no error
 

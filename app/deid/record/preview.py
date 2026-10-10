@@ -1,7 +1,12 @@
-"""``{record_id}_preview.png`` from the de-identified (masked) output. Port of ``engine._preview``."""
+"""``{record_id}_preview.png`` from the de-identified (masked) output. Port of ``engine._preview``.
+
+``render_png`` gives the same rendering as bytes, for the review screen's image view (only ever called on
+de-identified pending files).
+"""
 
 from __future__ import annotations
 
+import io
 from pathlib import Path
 
 import numpy as np
@@ -11,7 +16,7 @@ from PIL import Image
 SIZE = 512
 
 
-def write_preview(dicom_path: Path, png_path: Path) -> None:
+def _image(dicom_path: Path, size: int) -> Image.Image:
     ds = pydicom.dcmread(dicom_path)
     a = ds.pixel_array
     if int(ds.get("NumberOfFrames", 1) or 1) > 1:
@@ -24,5 +29,15 @@ def write_preview(dicom_path: Path, png_path: Path) -> None:
     if str(ds.get("PhotometricInterpretation", "")) == "MONOCHROME1":
         a = 255 - a
     image = Image.fromarray(a.astype(np.uint8))
-    image.thumbnail((SIZE, SIZE))
-    image.save(png_path)  # Pillow writes no text chunks unless asked: no metadata
+    image.thumbnail((size, size))
+    return image
+
+
+def write_preview(dicom_path: Path, png_path: Path) -> None:
+    _image(dicom_path, SIZE).save(png_path)  # Pillow writes no text chunks unless asked: no metadata
+
+
+def render_png(dicom_path: Path, size: int = 2048) -> bytes:
+    buf = io.BytesIO()
+    _image(dicom_path, size).save(buf, format="PNG")
+    return buf.getvalue()
